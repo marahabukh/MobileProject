@@ -1,5 +1,4 @@
 import { getCartItems } from "@/api/AddToCart";
-import { createOrder } from "@/api/Order";
 import BackButton from "@/components/BackButton";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
