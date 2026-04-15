@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 export default function BackButton() {
@@ -9,7 +9,7 @@ export default function BackButton() {
   if (router.canGoBack()) {
     router.back();
   } else {
-    router.replace("/(tabs)");   // أو "/(tabs)/Product" لو بدك ترجع لتب البرودكت تحديداً
+    router.replace("/(tabs)");   
   }
 };
   return (
