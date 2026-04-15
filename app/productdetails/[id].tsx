@@ -14,8 +14,9 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getProductById } from "@/api/Product";
+import { getProductById, getRandomProducts } from "@/api/Product";
 import { addToCart } from "@/api/AddToCart";
+import ProductCard from "@/components/ProductCard";
 
 const COLORS = {
   primary: "#d25a58",
@@ -38,8 +39,14 @@ const ProductDetails = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [currentImage, setCurrentImage] = useState<string>("");
 
+  const [randomProducts, setRandomProducts] = useState<any[]>([]);
+  const [loadingRandomProducts, setLoadingRandomProducts] = useState(false);
+
   useEffect(() => {
-    if (id) fetchProductFromAPI();
+    if (id) {
+      fetchProductFromAPI();
+      fetchRandomProducts();
+    }
   }, [id]);
 
   const fetchProductFromAPI = async () => {
@@ -47,6 +54,7 @@ const ProductDetails = () => {
       setLoading(true);
       const data = await getProductById(id as string);
       setProduct(data);
+
       const defaultImg = data.image || data.imageURL || "";
       setCurrentImage(defaultImg);
 
@@ -57,6 +65,19 @@ const ProductDetails = () => {
       console.log("Error fetching product:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRandomProducts = async () => {
+    try {
+      setLoadingRandomProducts(true);
+      const data = await getRandomProducts(String(id), 4);
+      setRandomProducts(data || []);
+    } catch (error) {
+      console.log("Error fetching random products:", error);
+      setRandomProducts([]);
+    } finally {
+      setLoadingRandomProducts(false);
     }
   };
 
@@ -94,7 +115,6 @@ const ProductDetails = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
-       
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
@@ -103,7 +123,10 @@ const ProductDetails = () => {
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
           <View style={[styles.imageCard, { height: height * 0.38 }]}>
             <Image
               source={{ uri: currentImage }}
@@ -116,15 +139,15 @@ const ProductDetails = () => {
             <FlatList
               horizontal
               data={imagesList}
-              inverted 
-              keyExtractor={(item, index) => index.toString()}
+              inverted
+              keyExtractor={(item: any, index: number) => index.toString()}
               showsHorizontalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
+              renderItem={({ item }: { item: string }) => (
+                <TouchableOpacity
                   onPress={() => setCurrentImage(item)}
                   style={[
                     styles.thumbnailItem,
-                    currentImage === item && styles.activeThumbnail
+                    currentImage === item && styles.activeThumbnail,
                   ]}
                 >
                   <Image source={{ uri: item }} style={styles.thumbnailImage} />
@@ -133,64 +156,111 @@ const ProductDetails = () => {
             />
           </View>
 
-<View style={styles.details}>
-  <Text style={styles.title}>{product.title || product.name}</Text>
+          <View style={styles.details}>
+            <Text style={styles.title}>{product.title || product.name}</Text>
 
-  <View style={styles.priceQuantityRow}>
-    <Text style={styles.price}>₪{product.price}</Text>
+            <View style={styles.priceQuantityRow}>
+              <Text style={styles.price}>₪{product.price}</Text>
 
-    <View style={styles.quantityContainerInline}>
-      <TouchableOpacity
-        style={styles.qtyButton}
-        onPress={() => setQuantity((prev) => Math.max(1, prev - 1))}
-      >
-        <Text style={styles.qtyText}>-</Text>
-      </TouchableOpacity>
+              <View style={styles.quantityContainerInline}>
+                <TouchableOpacity
+                  style={styles.qtyButton}
+                  onPress={() => setQuantity((prev: number) => Math.max(1, prev - 1))}
+                >
+                  <Text style={styles.qtyText}>-</Text>
+                </TouchableOpacity>
 
-      <Text style={styles.quantity}>{quantity}</Text>
+                <Text style={styles.quantity}>{quantity}</Text>
 
-      <TouchableOpacity
-        style={styles.qtyButton}
-        onPress={() => setQuantity((prev) => prev + 1)}
-      >
-        <Text style={styles.qtyText}>+</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
+                <TouchableOpacity
+                  style={styles.qtyButton}
+                  onPress={() => setQuantity((prev: number) => prev + 1)}
+                >
+                  <Text style={styles.qtyText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-  {product?.sizes?.length > 0 && (
-    <>
-      <Text style={styles.sectionTitle}>المقاس</Text>
-      <View style={styles.sizesContainer}>
-        {product.sizes.map((size: string) => (
-          <TouchableOpacity
-            key={size}
-            style={[styles.sizeButton, selectedSize === size && styles.selectedSize]}
-            onPress={() => setSelectedSize(size)}
-          >
-            <Text style={[styles.sizeText, selectedSize === size && { color: "#fff" }]}>
-              {size}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </>
-  )}
-</View>
+            <TouchableOpacity
+              style={[styles.inlineAddToCartButton, addingToCart && { opacity: 0.7 }]}
+              onPress={handleAddToCart}
+              disabled={addingToCart}
+            >
+              <Text style={styles.buttonText}>
+                {addingToCart ? "جاري الإضافة..." : "إضافة إلى السلة"}
+              </Text>
+            </TouchableOpacity>
+
+            {product?.sizes?.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>المقاس</Text>
+                <View style={styles.sizesContainer}>
+                  {product.sizes.map((size: string) => (
+                    <TouchableOpacity
+                      key={size}
+                      style={[
+                        styles.sizeButton,
+                        selectedSize === size && styles.selectedSize,
+                      ]}
+                      onPress={() => setSelectedSize(size)}
+                    >
+                      <Text
+                        style={[
+                          styles.sizeText,
+                          selectedSize === size && { color: "#fff" },
+                        ]}
+                      >
+                        {size}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
+
+          <View style={styles.suggestedSection}>
+            <View style={styles.suggestedHeader}>
+              <TouchableOpacity onPress={() => router.push("/ProductPage")}>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.suggestedTitle}>منتجات ممكن تعجبك</Text>
+            </View>
+
+            {loadingRandomProducts ? (
+              <ActivityIndicator
+                size="small"
+                color={COLORS.primary}
+                style={{ marginTop: 10 }}
+              />
+            ) : (
+              <FlatList
+                data={randomProducts}
+                horizontal
+                inverted
+                keyExtractor={(item: { id: any }) => String(item.id)}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.suggestedList}
+                renderItem={({ item }: { item: any }) => (
+                  <View
+                    style={[
+                      styles.suggestedCardWrapper,
+                      { width: width * 0.48 },
+                    ]}
+                  >
+                    <ProductCard
+                      id={item.id}
+                      title={item.title || item.name}
+                      price={item.price}
+                      image={item.image || item.imageURL}
+                    />
+                  </View>
+                )}
+              />
+            )}
+          </View>
         </ScrollView>
-
-      
-<View style={styles.bottomBarWrapper}>
-  <TouchableOpacity
-    style={[styles.addToCartButton, addingToCart && { opacity: 0.7 }]}
-    onPress={handleAddToCart}
-    disabled={addingToCart}
-  >
-    <Text style={styles.buttonText}>
-      {addingToCart ? "جاري الإضافة..." : "إضافة إلى السلة"}
-    </Text>
-  </TouchableOpacity>
-</View>
       </View>
     </SafeAreaView>
   );
@@ -212,9 +282,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 15,
-        writingDirection: "rtl",
-
-
+    writingDirection: "rtl",
   },
   headerTitle: {
     fontSize: 18,
@@ -245,7 +313,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.card,
-    marginLeft: 10, 
+    marginLeft: 10,
     overflow: "hidden",
   },
   activeThumbnail: {
@@ -273,6 +341,18 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginTop: 5,
     textAlign: "right",
+  },
+  inlineAddToCartButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 15,
+    alignItems: "center",
+    marginTop: 16,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
   },
   sectionTitle: {
     fontSize: 16,
@@ -304,11 +384,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.text,
   },
-  quantityContainer: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    marginBottom: 20,
-  },
   qtyButton: {
     width: 45,
     height: 45,
@@ -328,31 +403,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
-  bottomBar: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: COLORS.card,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-bottomBarWrapper: {
-  position: "absolute",
-  bottom: 70, 
-  left: 20,
-  right: 20,
-  zIndex: 999,
-},
-addToCartButton: {
-  backgroundColor: COLORS.primary,
-  paddingVertical: 18,
-  borderRadius: 15,
-  alignItems: "center",
-  shadowColor: COLORS.primary,
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 5,
-  elevation: 5,
-},
   buttonText: {
     color: "#fff",
     fontSize: 18,
@@ -364,13 +414,40 @@ addToCartButton: {
     alignItems: "center",
   },
   priceQuantityRow: {
-  flexDirection: "row-reverse",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginTop: 10,
-},
-quantityContainerInline: {
-  flexDirection: "row-reverse",
-  alignItems: "center",
-},
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  quantityContainerInline: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+  },
+  suggestedSection: {
+    marginTop: 25,
+    paddingHorizontal: 20,
+  },
+  suggestedHeader: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  suggestedTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.text,
+    textAlign: "right",
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  suggestedList: {
+    paddingBottom: 10,
+  },
+  suggestedCardWrapper: {
+    marginLeft: 12,
+  },
 });
