@@ -1,13 +1,47 @@
 import ApiBase from "./ApiBase";
 
 // ------------------------
+// Helpers لتحويل قيم Firestore
+// ------------------------
+const parseFirestoreString = (field: any): string => {
+  if (!field) return "";
+  if ("stringValue" in field) return field.stringValue;
+  return "";
+};
+
+const parseFirestoreNumber = (field: any): number => {
+  if (!field) return 0;
+  if ("integerValue" in field) return Number(field.integerValue);
+  if ("doubleValue" in field) return Number(field.doubleValue);
+  if ("stringValue" in field) return Number(field.stringValue) || 0;
+  return 0;
+};
+
+const parseFirestoreBoolean = (field: any): boolean => {
+  if (!field) return false;
+  if ("booleanValue" in field) return field.booleanValue;
+  if ("stringValue" in field) return field.stringValue === "true";
+  return false;
+};
+
+const shuffleArray = (array: any[]) => {
+  const newArray = [...array];
+
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+
+  return newArray;
+};
+
+// ------------------------
 // إنشاء منتج جديد
 // ------------------------
 export const createProduct = async (product: {
   title: string;
   price: number;
   image: string;
-
   categoryId: string;
   bestSeller: boolean;
 }) => {
@@ -41,15 +75,49 @@ export const getProducts = async () => {
 
   if (!res.data.documents) return [];
 
-  return res.data.documents.map((doc: any) => ({
-    id: doc.name.split("/").pop(),
-    ...Object.fromEntries(
-      Object.entries(doc.fields).map(([key, value]: any) => [
-        key,
-        Object.values(value)[0],
-      ])
-    ),
-  }));
+  return res.data.documents.map((doc: any) => {
+    const fields = doc.fields || {};
+
+    return {
+      id: doc.name.split("/").pop(),
+      title:
+        parseFirestoreString(fields.title) ||
+        parseFirestoreString(fields.name),
+      name:
+        parseFirestoreString(fields.name) ||
+        parseFirestoreString(fields.title),
+      price: parseFirestoreNumber(fields.price),
+      image:
+        parseFirestoreString(fields.image) ||
+        parseFirestoreString(fields.imageURL),
+      imageURL: parseFirestoreString(fields.imageURL),
+      categoryId: parseFirestoreString(fields.categoryId),
+      bestSeller: parseFirestoreBoolean(fields.bestSeller),
+      rating: parseFirestoreNumber(fields.rating),
+      sizes: fields.sizes?.arrayValue?.values
+        ? fields.sizes.arrayValue.values.map((item: any) => item.stringValue)
+        : [],
+      createdAt: fields.createdAt?.timestampValue || "",
+    };
+  });
+};
+
+// ------------------------
+// جلب منتجات عشوائية
+// ------------------------
+export const getRandomProducts = async (
+  currentProductId?: string,
+  limit: number = 4
+) => {
+  const allProducts = await getProducts();
+
+  const filteredProducts = currentProductId
+    ? allProducts.filter(
+        (item: any) => String(item.id) !== String(currentProductId)
+      )
+    : allProducts;
+
+  return shuffleArray(filteredProducts).slice(0, limit);
 };
 
 // ------------------------
@@ -58,15 +126,28 @@ export const getProducts = async () => {
 export const getProductById = async (id: string) => {
   const res = await ApiBase.get(`/products/${id}`);
   const doc = res.data;
+  const fields = doc.fields || {};
 
   return {
     id: doc.name.split("/").pop(),
-    ...Object.fromEntries(
-      Object.entries(doc.fields).map(([key, value]: any) => [
-        key,
-        Object.values(value)[0],
-      ])
-    ),
+    title:
+      parseFirestoreString(fields.title) ||
+      parseFirestoreString(fields.name),
+    name:
+      parseFirestoreString(fields.name) ||
+      parseFirestoreString(fields.title),
+    price: parseFirestoreNumber(fields.price),
+    image:
+      parseFirestoreString(fields.image) ||
+      parseFirestoreString(fields.imageURL),
+    imageURL: parseFirestoreString(fields.imageURL),
+    categoryId: parseFirestoreString(fields.categoryId),
+    bestSeller: parseFirestoreBoolean(fields.bestSeller),
+    rating: parseFirestoreNumber(fields.rating),
+    sizes: fields.sizes?.arrayValue?.values
+      ? fields.sizes.arrayValue.values.map((item: any) => item.stringValue)
+      : [],
+    createdAt: fields.createdAt?.timestampValue || "",
   };
 };
 
@@ -94,22 +175,9 @@ export const removeFromCart = async (id: string) => {
 // جلب المنتجات حسب الكاتيغوري
 // ------------------------
 export const getProductsByCategory = async (categoryId: string) => {
-  const res = await ApiBase.get("/products");
-  if (!res.data.documents) return [];
+  const products = await getProducts();
 
-  const allProducts = res.data.documents.map((doc: any) => {
-    const fields = doc.fields;
-    return {
-      id: doc.name.split("/").pop(),
-      title: fields.title?.stringValue,
-      price: fields.price?.doubleValue || fields.price?.integerValue,
-      image: fields.image?.stringValue,
-      categoryId: fields.categoryId?.stringValue,
-      bestSeller: fields.bestSeller?.booleanValue || false,
-    };
-  });
-
-  return allProducts.filter((p: any) => p.categoryId === categoryId);
+  return products.filter((p: any) => String(p.categoryId) === String(categoryId));
 };
 
 // ------------------------
@@ -118,11 +186,5 @@ export const getProductsByCategory = async (categoryId: string) => {
 export const getBestSellers = async () => {
   const products = await getProducts();
 
-  return products.filter((p: any) => {
-    return (
-      p.bestSeller === true || 
-      p.bestSeller === "true" || 
-      p.bestSeller === 1
-    );
-  });
+  return products.filter((p: any) => p.bestSeller === true);
 };
