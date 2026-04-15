@@ -5,20 +5,12 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
 
 export default function CategoryCard({ id, name, image }: any) {
-  const { width } = useWindowDimensions();
-
-  const numColumns = width > 1000 ? 4 : width > 700 ? 3 : 2;
-
-  let cardWidth = (width - 32 - 16 * (numColumns - 1)) / numColumns;
-  if (width > 700) cardWidth = Math.min(cardWidth, 255);
-
   return (
-    <View style={[styles.card, { width: cardWidth }]}>
+    <View style={styles.card}>
       <Image
         source={{
           uri: image && image.trim() !== ""
@@ -47,6 +39,7 @@ export default function CategoryCard({ id, name, image }: any) {
 
 const styles = StyleSheet.create({
   card: {
+    flex: 1,                 
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 12,
@@ -55,16 +48,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    alignSelf: "flex-start",
     flexDirection: "column",
-    height: "100%",
   },
   image: {
     width: "100%",
-    height: 165,
+    aspectRatio: 1,           
     borderRadius: 12,
     marginBottom: 12,
-    backgroundColor: "#f0f0f0", 
+    backgroundColor: "#f0f0f0",
   },
   name: {
     fontSize: 16,
