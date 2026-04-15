@@ -132,7 +132,7 @@ export default function HomeScreen() {
     <View
       style={{
         width: cardWidth,
-        marginRight: 16, // 👈 المسافة بين الكاردات
+        marginRight: 6, 
         marginTop: 15,
       }}
     >
