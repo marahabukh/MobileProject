@@ -39,10 +39,11 @@ export default function CategoryCard({ id, name, image }: any) {
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,                 
+    flex: 1,
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 12,
+    margin: 15,              
     elevation: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -52,7 +53,7 @@ const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    aspectRatio: 1,           
+    aspectRatio: 1,
     borderRadius: 12,
     marginBottom: 12,
     backgroundColor: "#f0f0f0",
