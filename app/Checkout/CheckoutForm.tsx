@@ -1,4 +1,5 @@
 import { getCartItems } from "@/api/AddToCart";
+import { createOrder } from "@/api/Order";
 import BackButton from "@/components/BackButton";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -373,8 +374,7 @@ export default function CheckoutPage() {
 
 const mainColor = "#d25a58";
 const darkPink = "#d25a58";
-const pageBg = "#faf7f8";
-
+const pageBg = "#F6F6F6";
 const styles = StyleSheet.create({
   page: {
     flex: 1,
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: "700",
-    color: darkPink,
+    color: "#d25a58",
     textAlign: "right",
     marginBottom: 16,
   },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1.5,
-    borderColor: "#d25a58",
+    borderColor: "#bc4d4b",
     borderRadius: 10,
     paddingVertical: 14,
     paddingHorizontal: 14,

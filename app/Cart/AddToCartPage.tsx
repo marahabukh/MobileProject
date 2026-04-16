@@ -17,7 +17,7 @@ import {
 } from "react-native";
 
 const accentRed = "#d25a58";
-const softBg = "#ffffff";
+const softBg = "#F6F6F6";
 const softCard = "#ffffff";
 const textDark = "#050404";
 const textMuted = "#9E978F";
@@ -28,7 +28,6 @@ export default function AddtoCartpage() {
   const isLargeScreen = width >= 1000;
   const queryClient = useQueryClient();
 
-  // 1. Fetch Cart Items
   const {
     data: cartItems = [],
     isLoading,
@@ -221,7 +220,6 @@ export default function AddtoCartpage() {
               )}
             </View>
 
-            {/* SUMMARY SECTION */}
             {cartItems.length > 0 && (
               <View style={[styles.summarySection, isLargeScreen && styles.summarySectionLarge]}>
                 <View style={styles.summaryCard}>

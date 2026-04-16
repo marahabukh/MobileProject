@@ -55,26 +55,15 @@ export default function HomeScreen() {
             <Text style={styles.heroTitle}>Loading...</Text>
           </View>
         ) : hero && hero.imageUrl ? (
-          <ImageBackground
-            source={{ uri: hero.imageUrl }}
-            style={styles.hero}
-            resizeMode="cover"
-          >
-            <View style={styles.heroOverlay}>
-              <Text style={styles.heroTitle}>{hero.title}</Text>
-              {hero.subtitle && (
-                <Text style={styles.heroSubtitle}>{hero.subtitle}</Text>
-              )}
-              {hero.ctaText && hero.ctaLink && (
-                <TouchableOpacity
-                  onPress={() => router.push(hero.ctaLink)}
-                  style={styles.ctaButton}
-                >
-                  <Text style={styles.ctaText}>{hero.ctaText}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </ImageBackground>
+      <ImageBackground
+  source={require("../../assets/images/hero.png")}
+  style={styles.hero}
+  resizeMode="cover"
+>
+  <View style={styles.heroOverlay}>
+    <Text style={styles.heroTitle}>Welcome 👋</Text>
+  </View>
+</ImageBackground>
         ) : (
           <View style={styles.hero}>
             <Text style={styles.heroTitle}>Welcome 👋</Text>

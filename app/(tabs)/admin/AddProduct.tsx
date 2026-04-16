@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { createProduct } from "../../../api/Product";
 import { getCategories } from "../../../api/Category";
+import React from "react";
 
 export default function AddProduct() {
   const [title, setTitle] = useState("");
