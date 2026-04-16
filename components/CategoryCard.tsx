@@ -1,26 +1,22 @@
 import { router } from "expo-router";
 import React from "react";
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function CategoryCard({ id, name, image }: any) {
   return (
     <View style={styles.card}>
       <Image
         source={{
-          uri: image && image.trim() !== ""
-            ? image
-            : "https://placehold.co/300x300/eeeeee/999999?text=No+Image",
+          uri:
+            image && image.trim() !== ""
+              ? image
+              : "https://placehold.co/300x300/eeeeee/999999?text=No+Image",
         }}
         style={styles.image}
         resizeMode="cover"
       />
-      <Text numberOfLines={2} style={styles.name}>
+
+      <Text numberOfLines={2} style={styles.title}>
         {name}
       </Text>
 
@@ -41,43 +37,52 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 12,
-    margin: 15,              
-    elevation: 5,
+    borderRadius: 18,
+    padding: 16, // 👈 نفس ProductCard
+    marginBottom: 20,
+
+    elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
+
     flexDirection: "column",
   },
+
   image: {
     width: "100%",
     aspectRatio: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 12,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#eee",
   },
-  name: {
-    fontSize: 16,
+
+  title: {
+    fontSize: 15,
     fontWeight: "600",
     color: "#222",
-    marginBottom: 12,
-    textAlign: "center",
+    marginBottom: 6,
+    textAlign: "right",
+    lineHeight: 20,
   },
-  spacer: { flex: 1 },
+
+  spacer: {
+    flex: 1,
+    minHeight: 12,
+  },
+
   button: {
+    marginTop: 10,
     backgroundColor: "#d25a58",
-    borderRadius: 10,
     paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 8,
+    borderRadius: 10,
+    alignItems: "center",
   },
+
   buttonText: {
     color: "#fff",
-    fontWeight: "700",
-    textAlign: "center",
-    fontSize: 15,
-    writingDirection: "rtl",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
