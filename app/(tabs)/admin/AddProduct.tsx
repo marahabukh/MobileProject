@@ -1,25 +1,25 @@
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
   TextInput,
   TouchableOpacity,
-  Text,
-  StyleSheet,
-  Alert,
-  Switch,
-  ScrollView,
+  View,
 } from "react-native";
-import { createProduct } from "../../../api/Product";
 import { getCategories } from "../../../api/Category";
+import { createProduct } from "../../../api/Product";
 
 export default function AddProduct() {
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [categories, setCategories] = useState<
-    { id: string; name: string }[]
-  >([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
+    [],
+  );
   const [bestSeller, setBestSeller] = useState(false);
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function AddProduct() {
       <Text style={styles.sectionTitle}>Select Category</Text>
 
       <View style={styles.categoriesContainer}>
-        {categories.map((cat) => (
+        {categories.map((cat: { id: any; name: any; }) => (
           <TouchableOpacity
             key={cat.id}
             style={[
