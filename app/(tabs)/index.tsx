@@ -106,7 +106,11 @@ export default function HomeScreen() {
         
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Best Sellers</Text>
+<<<<<<< HEAD
           <TouchableOpacity onPress={() => router.push("/productdetails/")}>
+=======
+          <TouchableOpacity onPress={() => router.push("/ProductPage")}>
+>>>>>>> ff6e4b8edaf6117462e1ee36d6977e72b3431541
             <Text style={styles.seeAll}>See All →</Text>
           </TouchableOpacity>
         </View>
