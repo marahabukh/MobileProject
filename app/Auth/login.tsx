@@ -23,6 +23,18 @@ type LoginFormData = {
   password: string;
 };
 
+const COLORS = {
+  primary: "#d25a58",
+  background: "#F6F6F6",
+  card: "#FFFFFF",
+  text: "#1E1E1E",
+  subText: "#666666",
+  border: "#E5E5E5",
+  overlay: "rgba(40, 20, 20, 0.34)",
+  inputBg: "#fffaf9",
+  danger: "#dc2626",
+};
+
 export default function LoginPage() {
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 900;
@@ -37,30 +49,30 @@ export default function LoginPage() {
   } = useForm<LoginFormData>({
     defaultValues: { email: "", password: "" },
   });
+const onSubmit = async (data: LoginFormData) => {
+  try {
+    setIsLoading(true);
 
-  const onSubmit = async (data: LoginFormData) => {
-    try {
-      setIsLoading(true);
+    const res = await loginUser(data.email, data.password);
 
-      const res = await loginUser(data.email, data.password);
+    console.log("LOGIN SUCCESS:", res);
 
-      Alert.alert(
-        "Welcome back! ⚡",
-        `Hello, ${res?.displayName || res?.name || res?.email || "User"}`
-      );
+    Alert.alert("success", "login done");
 
-      router.replace("/(tabs)")
-    } catch (err: any) {
-      console.log("LOGIN ERROR:", err);
-      Alert.alert(
-        "Login Failed",
-        err?.message || "Please check your credentials and try again."
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+    setTimeout(() => {
+      router.dismissAll();
+      router.replace("/");
+    }, 300);
+  } catch (err: any) {
+    console.log("LOGIN ERROR FULL:", err);
+    Alert.alert(
+      "Login Failed",
+      err?.message || "Please check your credentials and try again."
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
   const goToRegister = () => {
     router.push("/Auth/registor");
   };
@@ -84,7 +96,7 @@ export default function LoginPage() {
               <Text style={styles.inputIcon}>✉</Text>
               <TextInput
                 placeholder="you@example.com"
-                placeholderTextColor="#64748b"
+                placeholderTextColor="#9ca3af"
                 style={styles.input}
                 onChangeText={onChange}
                 value={value}
@@ -118,7 +130,7 @@ export default function LoginPage() {
               <Text style={styles.inputIcon}>🔒</Text>
               <TextInput
                 placeholder="••••••••"
-                placeholderTextColor="#64748b"
+                placeholderTextColor="#9ca3af"
                 secureTextEntry={!showPassword}
                 style={styles.input}
                 onChangeText={onChange}
@@ -146,7 +158,7 @@ export default function LoginPage() {
         disabled={isLoading}
       >
         {isLoading ? (
-          <ActivityIndicator color="#0f172a" />
+          <ActivityIndicator color="#fff" />
         ) : (
           <Text style={styles.buttonText}>Sign In</Text>
         )}
@@ -166,10 +178,10 @@ export default function LoginPage() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-   <Image
-  source={require("@/assets/images/login.jpg")}
-  style={styles.backgroundImage}
-/>
+      <Image
+        source={require("@/assets/images/login.jpg")}
+        style={styles.backgroundImage}
+      />
       <View style={styles.overlay} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -188,9 +200,7 @@ export default function LoginPage() {
             <View style={styles.formPanel}>
               <View style={styles.card}>
                 <Text style={styles.title}>Login</Text>
-                <Text style={styles.subtitle}>
-                  Enter your credentials
-                </Text>
+                <Text style={styles.subtitle}>Enter your credentials</Text>
                 {renderForm()}
               </View>
             </View>
@@ -208,14 +218,7 @@ export default function LoginPage() {
     </KeyboardAvoidingView>
   );
 }
-const COLORS = {
-  primary: "#d25a58",
-  background: "#F6F6F6",
-  card: "#FFFFFF",
-  text: "#1E1E1E",
-  subText: "#666666",
-  border: "#E5E5E5",
-};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -344,7 +347,6 @@ const styles = StyleSheet.create({
 
   inputIcon: {
     marginRight: 10,
-    color: COLORS.primary,
     fontSize: 16,
   },
 

@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { registerUser } from "@/api/UserServices";
+import { registerUser } from "../../api/UserServices";
 
 type FormData = {
   name: string;
@@ -26,7 +26,7 @@ const COLORS = {
   primary: "#d25a58",
   primarySoft: "#fff1ef",
   background: "#f8f5f4",
-  card: "rgba(255,255,255,0.95)",
+  card: "rgba(255,255,255,0.96)",
   text: "#1e1e1e",
   subText: "#6b7280",
   inputBg: "#fffaf9",
@@ -62,7 +62,9 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
 
-      await registerUser(data.email, data.password, data.name);
+      const res = await registerUser(data.email, data.password, data.name);
+
+      console.log("REGISTER SUCCESS:", res);
 
       reset({
         name: "",
@@ -71,13 +73,18 @@ export default function RegisterPage() {
         confirmPassword: "",
       });
 
-      Alert.alert("Success", "Account created successfully 🎉", [
-        {
-          text: "Continue",
-          onPress: () => router.replace("/Auth/login"),
-        },
-      ]);
+      Alert.alert(
+        "Success",
+        `Welcome ${res?.displayName || data.name || "User"} 🎉`,
+        [
+          {
+            text: "Continue",
+            onPress: () => router.replace("/Auth/login"),
+          },
+        ]
+      );
     } catch (err: any) {
+      console.log("REGISTER ERROR:", err);
       Alert.alert("Error", err?.message || "Registration failed");
     } finally {
       setIsLoading(false);
@@ -145,7 +152,10 @@ export default function RegisterPage() {
         control={control}
         rules={{
           required: "Password is required",
-          minLength: { value: 6, message: "At least 6 characters" },
+          minLength: {
+            value: 6,
+            message: "At least 6 characters",
+          },
         }}
         render={({ field: { onChange, value } }) => (
           <View style={styles.fieldWrapper}>
@@ -220,7 +230,6 @@ export default function RegisterPage() {
         source={require("@/assets/images/regster.png")}
         style={styles.backgroundImage}
       />
-
       <View style={styles.overlay} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -241,24 +250,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-
   backgroundImage: {
     position: "absolute",
     width: "100%",
     height: "100%",
   },
-
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.overlay,
   },
-
   scroll: {
     flexGrow: 1,
     justifyContent: "center",
     padding: 20,
   },
-
   card: {
     backgroundColor: COLORS.card,
     padding: 24,
@@ -273,11 +278,9 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 8,
   },
-
   largeCard: {
     maxWidth: 460,
   },
-
   title: {
     color: COLORS.text,
     fontSize: 28,
@@ -285,25 +288,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontWeight: "800",
   },
-
   subtitle: {
     color: COLORS.subText,
     textAlign: "center",
     marginBottom: 24,
     fontSize: 14,
   },
-
   fieldWrapper: {
     marginBottom: 14,
   },
-
   label: {
     color: COLORS.text,
     marginBottom: 7,
     fontSize: 14,
     fontWeight: "600",
   },
-
   input: {
     backgroundColor: COLORS.inputBg,
     color: COLORS.text,
@@ -314,18 +313,15 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     fontSize: 15,
   },
-
   inputError: {
     borderColor: COLORS.danger,
   },
-
   error: {
     color: COLORS.danger,
     fontSize: 12,
     marginTop: 6,
     marginLeft: 4,
   },
-
   button: {
     backgroundColor: COLORS.primary,
     paddingVertical: 15,
@@ -337,18 +333,15 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-
   buttonDisabled: {
     opacity: 0.6,
   },
-
   buttonText: {
     textAlign: "center",
     fontWeight: "700",
     color: COLORS.white,
     fontSize: 16,
   },
-
   link: {
     textAlign: "center",
     marginTop: 18,
