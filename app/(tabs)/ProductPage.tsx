@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import ProductCard from "@/components/ProductCard";
 import { getProducts } from "@/api/Product";
 import SearchComponent from "@/components/SearchComponent";
+import BackButton from "@/components/BackButton";
 
 export default function ProductsScreen() {
   const { width } = useWindowDimensions();
@@ -69,6 +70,9 @@ export default function ProductsScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={{ marginTop: 20 }}>
+  <BackButton />
+</View>
       <Text style={styles.title}>منتجاتنا </Text>
 
       <SearchComponent
