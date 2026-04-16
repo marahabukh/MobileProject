@@ -87,8 +87,9 @@ export default function CategoriesScreen() {
       }
       ListHeaderComponent={
         <>
-          <BackButton />
-          <Text style={styles.header}>كل الفئات</Text>
+<View style={{ marginTop: 20 }}>
+  <BackButton />
+</View>          <Text style={styles.header}>كل الفئات</Text>
          
           <SearchComponent
             value={search}
