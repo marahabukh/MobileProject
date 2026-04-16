@@ -94,7 +94,6 @@ export default function AddProduct() {
         style={styles.input}
       />
 
-      {/* اختيار الكاتيغوري */}
       <Text style={styles.sectionTitle}>Select Category</Text>
 
       <View style={styles.categoriesContainer}>
