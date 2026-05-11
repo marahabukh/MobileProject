@@ -1,4 +1,5 @@
-import { or } from "firebase/firestore";
+import { db } from "./firebase";
+import { collection, getDocs, query, orderBy, addDoc } from "firebase/firestore";
 import axiosInstance from "./ApiBase";
 
 type OrderItem = {
@@ -11,7 +12,7 @@ type OrderItem = {
 };
 
 type CreateOrderPayload = {
- orderId: string;
+  orderId: string;
   firstName: string;
   lastName: string;
   phone1: string;
@@ -71,7 +72,7 @@ const toFirestoreValue = (value: any): any => {
 export const createOrder = async (payload: CreateOrderPayload) => {
   const firestoreBody = {
     fields: {
-        orderId: toFirestoreValue(payload.orderId),
+      orderId: toFirestoreValue(payload.orderId),
       firstName: toFirestoreValue(payload.firstName),
       lastName: toFirestoreValue(payload.lastName),
       phone1: toFirestoreValue(payload.phone1),
@@ -92,4 +93,26 @@ export const createOrder = async (payload: CreateOrderPayload) => {
 
   const response = await axiosInstance.post("/orders", firestoreBody);
   return response.data;
+};
+
+export const getOrders = async () => {
+  try {
+    const querySnapshot = await getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc")));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        total: Number(data.total || 0),
+        subtotal: Number(data.subtotal || 0),
+        shippingCost: Number(data.shippingCost || 0),
+        status: data.status || "pending",
+        createdAt: data.createdAt || "",
+        items: data.items || [],
+        customerName: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
+      };
+    });
+  } catch (error) {
+    console.error("SDK Get Orders Error:", error);
+    return [];
+  }
 };

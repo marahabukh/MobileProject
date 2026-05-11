@@ -16,16 +16,18 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { loginUser } from "@/api/UserServices";
+import { registerUser } from "@/api/UserServices";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { getSecurely, saveSecurely } from "@/lib/SecureStorage";
 import { useEffect } from "react";
 
-type LoginFormData = {
+type FormData = {
+  name: string;
   email: string;
   password: string;
+  confirmPassword: string;
 };
 
 const COLORS = {
@@ -40,29 +42,38 @@ const COLORS = {
   glass: "rgba(255, 255, 255, 0.9)",
 };
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const { width, height } = useWindowDimensions();
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     control,
     handleSubmit,
+    watch,
     formState: { errors },
+    reset,
     setValue,
-  } = useForm<LoginFormData>({
-    defaultValues: { email: "", password: "" },
+  } = useForm<FormData>({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
   });
 
   useEffect(() => {
-    const loadSavedEmail = async () => {
-      const savedEmail = await getSecurely("last_login_email");
-      if (savedEmail) {
-        setValue("email", savedEmail);
+    const loadSavedName = async () => {
+      const savedName = await getSecurely("last_reg_name");
+      if (savedName) {
+        setValue("name", savedName);
       }
     };
-    loadSavedEmail();
+    loadSavedName();
   }, []);
+
+  const password = watch("password");
 
   const triggerHaptic = () => {
     if (Platform.OS !== "web") {
@@ -70,49 +81,59 @@ export default function LoginPage() {
     }
   };
 
-  const onSubmit = async (data: LoginFormData) => {
-    console.log("Attempting login for:", data.email);
+  const onSubmit = async (data: FormData) => {
+    console.log("Attempting registration for:", data.email);
     triggerHaptic();
     setIsLoading(true);
     try {
-      const res = await loginUser(data.email, data.password);
-      console.log("LOGIN SUCCESS:", res);
-      
+      const res = await registerUser(data.email, data.password, data.name);
+      console.log("REGISTER SUCCESS:", res);
+
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      // Persist email for next time
+      // Persist name for next time or for login page
+      await saveSecurely("last_reg_name", data.name);
       await saveSecurely("last_login_email", data.email);
 
-      // Using replace("/") as it's the safest way to reset the navigation state to tabs
-      router.replace("/(tabs)");
+      reset();
+      Alert.alert(
+        "Welcome! 🎉",
+        "Your account has been created successfully.",
+        [
+          {
+            text: "Start Shopping",
+            onPress: () => router.replace("/(tabs)"),
+          },
+        ]
+      );
     } catch (err: any) {
-      console.error("LOGIN ERROR:", err);
+      console.error("REGISTER ERROR:", err);
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
       Alert.alert(
-        "Login Failed",
-        err?.message || "Invalid email or password. Please try again.",
-        [{ text: "OK" }]
+        "Registration Failed", 
+        err?.message || "Something went wrong. Please try again.",
+        [{ text: "Try Again" }]
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const goToRegister = () => {
+  const goToLogin = () => {
     triggerHaptic();
-    router.push("/Auth/register");
+    router.push("/Auth/login");
   };
 
   return (
     <View style={styles.container}>
       <Image
-        source={require("@/assets/images/login.jpg")}
+        source={require("@/assets/images/regster.png")}
         style={[styles.backgroundImage, { width, height }]}
-        blurRadius={2}
+        blurRadius={1}
       />
       <View style={styles.darkOverlay} />
 
@@ -134,11 +155,33 @@ export default function LoginPage() {
           >
             <View style={styles.card}>
               <View style={styles.cardHeader}>
-                <Text style={styles.title}>Welcome Back</Text>
-                <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+                <Text style={styles.title}>Create Account</Text>
+                <Text style={styles.subtitle}>Join our community of shoppers</Text>
               </View>
 
               <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Full Name</Text>
+                  <Controller
+                    name="name"
+                    control={control}
+                    rules={{ required: "Name is required" }}
+                    render={({ field: { onChange, value } }) => (
+                      <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
+                        <Ionicons name="person-outline" size={20} color={COLORS.textMuted} />
+                        <TextInput
+                          placeholder="John Doe"
+                          placeholderTextColor="#A0A0A0"
+                          style={styles.input}
+                          onChangeText={onChange}
+                          value={value}
+                        />
+                      </View>
+                    )}
+                  />
+                  {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
+                </View>
+
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Email Address</Text>
                   <Controller
@@ -166,9 +209,7 @@ export default function LoginPage() {
                       </View>
                     )}
                   />
-                  {errors.email && (
-                    <Text style={styles.errorText}>{errors.email.message}</Text>
-                  )}
+                  {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -176,7 +217,10 @@ export default function LoginPage() {
                   <Controller
                     name="password"
                     control={control}
-                    rules={{ required: "Password is required" }}
+                    rules={{
+                      required: "Password is required",
+                      minLength: { value: 6, message: "Min 6 characters" },
+                    }}
                     render={({ field: { onChange, value } }) => (
                       <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
                         <Ionicons name="lock-closed-outline" size={20} color={COLORS.textMuted} />
@@ -188,10 +232,7 @@ export default function LoginPage() {
                           onChangeText={onChange}
                           value={value}
                         />
-                        <TouchableOpacity
-                          onPress={() => setShowPassword(!showPassword)}
-                          style={styles.eyeIcon}
-                        >
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                           <Ionicons 
                             name={showPassword ? "eye-off-outline" : "eye-outline"} 
                             size={20} 
@@ -201,20 +242,37 @@ export default function LoginPage() {
                       </View>
                     )}
                   />
-                  {errors.password && (
-                    <Text style={styles.errorText}>{errors.password.message}</Text>
-                  )}
+                  {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
                 </View>
 
-                <TouchableOpacity 
-                  style={styles.forgotPassword}
-                  onPress={triggerHaptic}
-                >
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                </TouchableOpacity>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Confirm Password</Text>
+                  <Controller
+                    name="confirmPassword"
+                    control={control}
+                    rules={{
+                      required: "Please confirm password",
+                      validate: (val) => val === password || "Passwords don't match",
+                    }}
+                    render={({ field: { onChange, value } }) => (
+                      <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
+                        <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.textMuted} />
+                        <TextInput
+                          placeholder="••••••••"
+                          placeholderTextColor="#A0A0A0"
+                          secureTextEntry={!showPassword}
+                          style={styles.input}
+                          onChangeText={onChange}
+                          value={value}
+                        />
+                      </View>
+                    )}
+                  />
+                  {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>}
+                </View>
 
                 <TouchableOpacity
-                  style={[styles.loginButton, isLoading && styles.buttonDisabled]}
+                  style={[styles.registerButton, isLoading && styles.buttonDisabled]}
                   onPress={handleSubmit(onSubmit)}
                   disabled={isLoading}
                   activeOpacity={0.8}
@@ -222,14 +280,14 @@ export default function LoginPage() {
                   {isLoading ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.loginButtonText}>Sign In</Text>
+                    <Text style={styles.registerButtonText}>Create Account</Text>
                   )}
                 </TouchableOpacity>
 
                 <View style={styles.footer}>
-                  <Text style={styles.footerText}>Don't have an account?</Text>
-                  <TouchableOpacity onPress={goToRegister}>
-                    <Text style={styles.footerLink}> Create Account</Text>
+                  <Text style={styles.footerText}>Already have an account?</Text>
+                  <TouchableOpacity onPress={goToLogin}>
+                    <Text style={styles.footerLink}> Sign In</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -261,11 +319,11 @@ const styles = StyleSheet.create({
   headerNav: {
     paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   cardWrapper: {
     flex: 1,
-    justifyContent: "flex-end",
+    justifyContent: "center",
     paddingHorizontal: 20,
   },
   card: {
@@ -279,7 +337,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   cardHeader: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   title: {
     fontSize: 32,
@@ -294,10 +352,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   form: {
-    gap: 20,
+    gap: 16,
   },
   inputGroup: {
-    gap: 8,
+    gap: 6,
   },
   label: {
     fontSize: 14,
@@ -311,7 +369,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.8)",
     borderRadius: 18,
     paddingHorizontal: 16,
-    height: 60,
+    height: 56,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -332,18 +390,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontWeight: "600",
   },
-  eyeIcon: {
-    padding: 8,
-  },
-  forgotPassword: {
-    alignSelf: "flex-end",
-  },
-  forgotPasswordText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  loginButton: {
+  registerButton: {
     backgroundColor: COLORS.primary,
     height: 60,
     borderRadius: 18,
@@ -356,7 +403,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 5,
   },
-  loginButtonText: {
+  registerButtonText: {
     color: "#FFF",
     fontSize: 18,
     fontWeight: "800",
@@ -367,7 +414,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 20,
+    marginTop: 16,
   },
   footerText: {
     color: COLORS.textMuted,

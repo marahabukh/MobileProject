@@ -1,46 +1,39 @@
-import ApiBase from "./ApiBase";
+import { db } from "./firebase";
+import { collection, doc, addDoc, getDocs, deleteDoc, query, where } from "firebase/firestore";
 
 export const createCategory = async (category: { name: string; image?: string }) => {
   const payload = {
-    fields: {
-      name: { stringValue: category.name },
-      image: { stringValue: category.image || "" },
-      createdAt: { timestampValue: new Date().toISOString() },
-    },
+    name: category.name,
+    image: category.image || "",
+    createdAt: new Date().toISOString(),
   };
-  return await ApiBase.post("/categories", payload);
+  return await addDoc(collection(db, "categories"), payload);
 };
 
 export const getCategories = async () => {
-    
-  const res = await ApiBase.get("/categories");
-  return res.data.documents.map((doc: any) => ({
-    id: doc.name.split("/").pop(),
-    ...Object.fromEntries(
-      Object.entries(doc.fields).map(([key, value]: any) => [key, Object.values(value)[0]])
-    ),
-  }));
-
+  const querySnapshot = await getDocs(collection(db, "categories"));
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as any));
 };
+
+export const deleteCategory = async (id: string) => {
+  try {
+    const docRef = doc(db, "categories", id);
+    await deleteDoc(docRef);
+    return true;
+  } catch (error) {
+    console.error("SDK Delete Category Error:", error);
+    throw error;
+  }
+};
+
 export const getProductsByCategory = async (categoryId: string) => {
-    console.log("RAW DOCS:");
-  const res = await ApiBase.get("/products");
-
-  if (!res.data.documents) return [];
-
-  const allProducts = res.data.documents.map((doc: any) => {
-    const fields = doc.fields;
-
-    return {
-      id: doc.name.split("/").pop(),
-      title: fields.title?.stringValue,
-      price: fields.price?.doubleValue || fields.price?.integerValue,
-      image: fields.image?.stringValue,
-      categoryId: fields.categoryId?.stringValue,
-    };
-  });
-
-  return allProducts.filter(
-    (p: any) => p.categoryId === categoryId
-  );
+  const q = query(collection(db, "products"), where("categoryId", "==", categoryId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as any));
 };

@@ -1,4 +1,5 @@
-import axiosInstance from "./ApiBase";
+import { db } from "./firebase";
+import { collection, doc, addDoc, getDocs, deleteDoc, updateDoc, query, where } from "firebase/firestore";
 
 type AddToCartPayload = {
   productId: string;
@@ -13,65 +14,42 @@ export const addToCart = async (payload: AddToCartPayload) => {
   if (!payload.productId || !payload.title || !payload.price || !payload.quantity) {
     throw new Error("Missing required fields");
   }
-  if (payload.quantity <= 0) {
-    throw new Error("Quantity must be greater than zero");
-  }
   
-  const existingItemsRes = await axiosInstance.get("/cart");
-  const existingItems = existingItemsRes.data.documents || [];
-  const existingItem = existingItems.find((item: any) => {
-    const fields = item.fields || {};
-    return (
-      fields.productId?.stringValue === payload.productId &&
-      fields.size?.stringValue === payload.size
-    );
+  const cartRef = collection(db, "cart");
+  const q = query(cartRef, where("productId", "==", payload.productId), where("size", "==", payload.size));
+  const snapshot = await getDocs(q);
+  
+  if (!snapshot.empty) {
+    const existingDoc = snapshot.docs[0];
+    const newQuantity = (existingDoc.data().quantity || 0) + payload.quantity;
+    return await updateCartItem(existingDoc.id, newQuantity);
   }
-  );
-  if (existingItem) {
-    const existingQuantity = parseInt(existingItem.fields.quantity.integerValue, 10) || 0;
-    const newQuantity = existingQuantity + payload.quantity;
-    return await updateCartItem(existingItem.name.split("/").pop(), newQuantity);
-  }     
 
   const body = {
-    fields: {
-      productId: { stringValue: payload.productId },
-      title: { stringValue: payload.title },
-      price: { integerValue: payload.price },
-      image: { stringValue: payload.image },
-      quantity: { integerValue: payload.quantity },
-      size: { stringValue: payload.size || "" },
-    },
+    productId: payload.productId,
+    title: payload.title,
+    price: Number(payload.price),
+    image: payload.image,
+    quantity: Number(payload.quantity),
+    size: payload.size || "",
+    createdAt: new Date().toISOString()
   };
 
-  const response = await axiosInstance.post("/cart", body);
-  return response.data;
+  return await addDoc(cartRef, body);
 };
 
 export const getCartItems = async () => {
-  const res = await axiosInstance.get("/cart");
-  if (!res.data.documents) return [];
-
-  return res.data.documents.map((doc: any) => {
-    const parsedFields = Object.fromEntries(
-      Object.entries(doc.fields || {}).map(([key, value]: any) => [key, Object.values(value)[0]])
-    );
-
-    return {
-      ...parsedFields,
-      id: doc.name.split("/").pop(), // Ensures id is strictly the Firestore Document ID
-    };
-  });
+  const querySnapshot = await getDocs(collection(db, "cart"));
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as any));
 };
 
 export const removeFromCart = async (id: string) => {
-  return await axiosInstance.delete(`/cart/${id}`);
+  return await deleteDoc(doc(db, "cart", id));
 };
 
 export const updateCartItem = async (id: string, quantity: number) => {
-  return await axiosInstance.patch(`/cart/${id}?updateMask.fieldPaths=quantity`, {
-    fields: {
-      quantity: { integerValue: quantity }
-    }
-  });
+  return await updateDoc(doc(db, "cart", id), { quantity: Number(quantity) });
 };

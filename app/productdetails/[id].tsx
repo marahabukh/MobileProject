@@ -160,7 +160,12 @@ const ProductDetails = () => {
             <Text style={styles.title}>{product.title || product.name}</Text>
 
             <View style={styles.priceQuantityRow}>
-              <Text style={styles.price}>₪{product.price}</Text>
+              <View>
+                <Text style={styles.price}>₪{product.price}</Text>
+                <Text style={{ textAlign: 'right', color: '#888', fontSize: 12, marginTop: 4 }}>
+                  المتوفر: {product.stock || 0} قطع
+                </Text>
+              </View>
 
               <View style={styles.quantityContainerInline}>
                 <TouchableOpacity

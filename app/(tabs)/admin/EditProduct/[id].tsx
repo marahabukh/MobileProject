@@ -14,10 +14,10 @@ import {
   Dimensions,
 } from "react-native";
 import { getCategories } from "@/api/Category";
-import { createProduct } from "@/api/Product";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { getProductById, updateProduct } from "@/api/Product";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -34,12 +34,13 @@ const COLORS = {
   textMain: "#1A1A1A",
   textMuted: "#7C7C7C",
   border: "rgba(0,0,0,0.05)",
-  glass: "rgba(255, 255, 255, 0.8)",
 };
 
-export default function AddProduct() {
+export default function EditProduct() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const queryClient = useQueryClient();
+  
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState("");
@@ -47,25 +48,36 @@ export default function AddProduct() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [bestSeller, setBestSeller] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [fetchingCats, setFetchingCats] = useState(true);
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const init = async () => {
       try {
-        const cats = await getCategories();
+        const [cats, product] = await Promise.all([
+          getCategories(),
+          getProductById(id as string)
+        ]);
+
         setCategories(cats);
-        if (cats.length > 0) {
-          setCategoryId(cats[0].id);
+        if (product) {
+          setTitle(product.title || "");
+          setPrice(String(product.price || ""));
+          setImage(product.image || "");
+          setStock(String(product.stock || "0"));
+          setCategoryId(product.categoryId || null);
+          setBestSeller(!!product.bestSeller);
         }
       } catch (err) {
-        console.error("Error fetching categories:", err);
+        console.error("Error fetching data:", err);
+        Alert.alert("Error", "Failed to load product details");
       } finally {
-        setFetchingCats(false);
+        setLoading(false);
       }
     };
-    fetchCategories();
-  }, []);
+    if (id) init();
+  }, [id]);
 
   const triggerHaptic = useCallback((type: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) => {
     if (Platform.OS !== "web") {
@@ -73,35 +85,43 @@ export default function AddProduct() {
     }
   }, []);
 
-  const handleAddProduct = async () => {
+  const handleUpdateProduct = async () => {
     if (!title || !price || !image) {
       triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
       return Alert.alert("Required Fields", "Please fill in all details.");
     }
 
-    setLoading(true);
+    setSaving(true);
     triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await createProduct({
+      await updateProduct(id as string, {
         title,
         price: Number(price),
         image,
-        categoryId: categoryId || "",
+        categoryId,
         bestSeller,
-        stock: Number(stock || 0),
+        stock: Number(stock),
       });
 
-      await queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
       triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
-      Alert.alert("Success! 🎉", "Product listed successfully.");
+      Alert.alert("Success! 🎉", "Product updated successfully.");
       router.back();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save.");
+      Alert.alert("Error", error.message || "Failed to update product.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loaderText}>Fetching product details...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -113,7 +133,6 @@ export default function AddProduct() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
         <Animated.View entering={FadeInDown.duration(600)} style={styles.header}>
           <TouchableOpacity 
             onPress={() => {
@@ -124,32 +143,30 @@ export default function AddProduct() {
           >
             <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Product</Text>
+          <Text style={styles.headerTitle}>Edit Product</Text>
           <View style={{ width: 48 }} /> 
         </Animated.View>
 
-        {/* Image Preview Card */}
         <Animated.View entering={FadeInDown.delay(100)} style={styles.imagePreviewCard}>
-          {image ? (
-            <Image 
-              source={{ uri: image }} 
-              style={styles.previewImage} 
-              contentFit="cover"
-              transition={500}
-            />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Ionicons name="image-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.placeholderText}>Enter Image URL below to preview</Text>
-            </View>
-          )}
+          <Image 
+            source={{ uri: image || "https://via.placeholder.com/150" }} 
+            style={styles.previewImage} 
+            contentFit="cover"
+            transition={500}
+          />
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.6)"]}
+            style={styles.imageOverlay}
+          >
+            <Text style={styles.imageTitleOverlay}>{title || "Product Image"}</Text>
+          </LinearGradient>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200)} style={styles.formContainer}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Product Name</Text>
             <TextInput
-              placeholder="e.g. Premium Leather Jacket"
+              placeholder="Product Title"
               value={title}
               onChangeText={setTitle}
               style={styles.input}
@@ -183,7 +200,7 @@ export default function AddProduct() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Image URL</Text>
             <TextInput
-              placeholder="https://images.unsplash.com/..."
+              placeholder="https://..."
               value={image}
               onChangeText={setImage}
               style={styles.input}
@@ -191,33 +208,28 @@ export default function AddProduct() {
             />
           </View>
 
-          {/* Categories */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Select Category</Text>
-            {fetchingCats ? (
-              <ActivityIndicator color={COLORS.primary} style={{ marginTop: 10 }} />
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-                {categories.map((cat, index) => (
-                  <Animated.View key={cat.id} entering={FadeInRight.delay(index * 50)}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        triggerHaptic();
-                        setCategoryId(cat.id);
-                      }}
-                      style={[
-                        styles.chip,
-                        categoryId === cat.id && styles.chipSelected
-                      ]}
-                    >
-                      <Text style={[styles.chipText, categoryId === cat.id && styles.chipTextSelected]}>
-                        {cat.name}
-                      </Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                ))}
-              </ScrollView>
-            )}
+            <Text style={styles.sectionTitle}>Category</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+              {categories.map((cat, index) => (
+                <Animated.View key={cat.id} entering={FadeInRight.delay(index * 50)}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      triggerHaptic();
+                      setCategoryId(cat.id);
+                    }}
+                    style={[
+                      styles.chip,
+                      categoryId === cat.id && styles.chipSelected
+                    ]}
+                  >
+                    <Text style={[styles.chipText, categoryId === cat.id && styles.chipTextSelected]}>
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              ))}
+            </ScrollView>
           </View>
 
           <View style={styles.switchCard}>
@@ -242,8 +254,8 @@ export default function AddProduct() {
           </View>
 
           <TouchableOpacity 
-            disabled={loading}
-            onPress={handleAddProduct}
+            disabled={saving}
+            onPress={handleUpdateProduct}
             activeOpacity={0.8}
             style={styles.submitButtonContainer}
           >
@@ -253,12 +265,12 @@ export default function AddProduct() {
               end={{ x: 1, y: 1 }}
               style={styles.submitButton}
             >
-              {loading ? (
+              {saving ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <>
-                  <Text style={styles.submitText}>Publish Product</Text>
-                  <Ionicons name="arrow-forward" size={20} color="white" style={{ marginLeft: 8 }} />
+                  <Text style={styles.submitText}>Save Changes</Text>
+                  <Ionicons name="checkmark-circle-outline" size={20} color="white" style={{ marginLeft: 8 }} />
                 </>
               )}
             </LinearGradient>
@@ -273,6 +285,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.background,
+  },
+  loaderText: {
+    marginTop: 16,
+    color: COLORS.textMuted,
+    fontSize: 16,
+    fontWeight: "500",
   },
   scrollView: {
     flex: 1,
@@ -313,8 +337,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: COLORS.border,
-    justifyContent: "center",
-    alignItems: "center",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -331,14 +353,19 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  imagePlaceholder: {
-    alignItems: "center",
-    gap: 12,
+  imageOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    paddingHorizontal: 20,
+    justifyContent: "center",
   },
-  placeholderText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    fontWeight: "500",
+  imageTitleOverlay: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "700",
   },
   formContainer: {
     gap: 20,

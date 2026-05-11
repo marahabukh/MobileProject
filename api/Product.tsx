@@ -1,39 +1,5 @@
-import ApiBase from "./ApiBase";
-
-// ------------------------
-// Helpers لتحويل قيم Firestore
-// ------------------------
-const parseFirestoreString = (field: any): string => {
-  if (!field) return "";
-  if ("stringValue" in field) return field.stringValue;
-  return "";
-};
-
-const parseFirestoreNumber = (field: any): number => {
-  if (!field) return 0;
-  if ("integerValue" in field) return Number(field.integerValue);
-  if ("doubleValue" in field) return Number(field.doubleValue);
-  if ("stringValue" in field) return Number(field.stringValue) || 0;
-  return 0;
-};
-
-const parseFirestoreBoolean = (field: any): boolean => {
-  if (!field) return false;
-  if ("booleanValue" in field) return field.booleanValue;
-  if ("stringValue" in field) return field.stringValue === "true";
-  return false;
-};
-
-const shuffleArray = (array: any[]) => {
-  const newArray = [...array];
-
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-
-  return newArray;
-};
+import { db } from "./firebase";
+import { collection, doc, addDoc, getDocs, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 
 // ------------------------
 // إنشاء منتج جديد
@@ -44,131 +10,88 @@ export const createProduct = async (product: {
   image: string;
   categoryId: string;
   bestSeller: boolean;
+  stock?: number;
 }) => {
   if (!product.title || !product.image || !product.categoryId) {
     throw new Error("Title, Image and Category are required");
   }
 
-  if (isNaN(product.price) || product.price <= 0) {
-    throw new Error("Price must be a positive number");
-  }
-
   const payload = {
-    fields: {
-      title: { stringValue: product.title },
-      price: { doubleValue: product.price },
-      image: { stringValue: product.image },
-      categoryId: { stringValue: product.categoryId },
-      bestSeller: { booleanValue: product.bestSeller },
-      createdAt: { timestampValue: new Date().toISOString() },
-    },
+    title: product.title,
+    price: Number(product.price),
+    image: product.image,
+    categoryId: product.categoryId,
+    bestSeller: !!product.bestSeller,
+    stock: Number(product.stock || 0),
+    createdAt: new Date().toISOString(),
   };
 
-  return await ApiBase.post("/products", payload);
+  return await addDoc(collection(db, "products"), payload);
 };
 
 // ------------------------
 // جلب كل المنتجات
 // ------------------------
 export const getProducts = async () => {
-  const res = await ApiBase.get("/products");
-
-  if (!res.data.documents) return [];
-
-  return res.data.documents.map((doc: any) => {
-    const fields = doc.fields || {};
-
-    return {
-      id: doc.name.split("/").pop(),
-      title:
-        parseFirestoreString(fields.title) ||
-        parseFirestoreString(fields.name),
-      name:
-        parseFirestoreString(fields.name) ||
-        parseFirestoreString(fields.title),
-      price: parseFirestoreNumber(fields.price),
-      image:
-        parseFirestoreString(fields.image) ||
-        parseFirestoreString(fields.imageURL),
-      imageURL: parseFirestoreString(fields.imageURL),
-      categoryId: parseFirestoreString(fields.categoryId),
-      bestSeller: parseFirestoreBoolean(fields.bestSeller),
-      rating: parseFirestoreNumber(fields.rating),
-      sizes: fields.sizes?.arrayValue?.values
-        ? fields.sizes.arrayValue.values.map((item: any) => item.stringValue)
-        : [],
-      createdAt: fields.createdAt?.timestampValue || "",
-    };
-  });
+  const querySnapshot = await getDocs(collection(db, "products"));
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as any));
 };
 
 // ------------------------
-// جلب منتجات عشوائية
+// حذف منتج
 // ------------------------
-export const getRandomProducts = async (
-  currentProductId?: string,
-  limit: number = 4
-) => {
-  const allProducts = await getProducts();
+export const deleteProduct = async (id: string) => {
+  try {
+    const docRef = doc(db, "products", id);
+    await deleteDoc(docRef);
+    return true;
+  } catch (error) {
+    console.error("SDK Delete Product Error:", error);
+    throw error;
+  }
+};
 
-  const filteredProducts = currentProductId
-    ? allProducts.filter(
-        (item: any) => String(item.id) !== String(currentProductId)
-      )
-    : allProducts;
+// ------------------------
+// تحديث منتج
+// ------------------------
+export const updateProduct = async (id: string, product: any) => {
+  const docRef = doc(db, "products", id);
+  const cleanData: any = {};
+  if (product.title) cleanData.title = product.title;
+  if (product.price !== undefined) cleanData.price = Number(product.price);
+  if (product.image) cleanData.image = product.image;
+  if (product.categoryId) cleanData.categoryId = product.categoryId;
+  if (product.bestSeller !== undefined) cleanData.bestSeller = !!product.bestSeller;
+  if (product.stock !== undefined) cleanData.stock = Number(product.stock);
 
-  return shuffleArray(filteredProducts).slice(0, limit);
+  return await updateDoc(docRef, cleanData);
 };
 
 // ------------------------
 // جلب منتج واحد حسب ID
 // ------------------------
 export const getProductById = async (id: string) => {
-  const res = await ApiBase.get(`/products/${id}`);
-  const doc = res.data;
-  const fields = doc.fields || {};
-
-  return {
-    id: doc.name.split("/").pop(),
-    title:
-      parseFirestoreString(fields.title) ||
-      parseFirestoreString(fields.name),
-    name:
-      parseFirestoreString(fields.name) ||
-      parseFirestoreString(fields.title),
-    price: parseFirestoreNumber(fields.price),
-    image:
-      parseFirestoreString(fields.image) ||
-      parseFirestoreString(fields.imageURL),
-    imageURL: parseFirestoreString(fields.imageURL),
-    categoryId: parseFirestoreString(fields.categoryId),
-    bestSeller: parseFirestoreBoolean(fields.bestSeller),
-    rating: parseFirestoreNumber(fields.rating),
-    sizes: fields.sizes?.arrayValue?.values
-      ? fields.sizes.arrayValue.values.map((item: any) => item.stringValue)
-      : [],
-    createdAt: fields.createdAt?.timestampValue || "",
-  };
+  const docRef = doc(db, "products", id);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as any;
+  }
+  throw new Error("Product not found");
 };
 
 // ------------------------
-// تحديث كمية عنصر في العربة
+// جلب منتجات عشوائية (مبسطة للـ SDK)
 // ------------------------
-export const updateCartItem = async (id: string, quantity: number) => {
-  if (quantity < 0) throw new Error("Quantity cannot be negative");
-
-  const payload = {
-    fields: { quantity: { integerValue: quantity } },
-  };
-
-  return await ApiBase.patch(`/cart/${id}`, payload);
-};
-
-// ------------------------
-// حذف عنصر من العربة
-// ------------------------
-export const removeFromCart = async (id: string) => {
-  return await ApiBase.delete(`/cart/${id}`);
+export const getRandomProducts = async (currentProductId?: string, limit: number = 4) => {
+  const products = await getProducts();
+  const filtered = currentProductId 
+    ? products.filter(p => p.id !== currentProductId)
+    : products;
+  
+  return filtered.sort(() => 0.5 - Math.random()).slice(0, limit);
 };
 
 // ------------------------
@@ -176,8 +99,7 @@ export const removeFromCart = async (id: string) => {
 // ------------------------
 export const getProductsByCategory = async (categoryId: string) => {
   const products = await getProducts();
-
-  return products.filter((p: any) => String(p.categoryId) === String(categoryId));
+  return products.filter(p => p.categoryId === categoryId);
 };
 
 // ------------------------
@@ -185,6 +107,5 @@ export const getProductsByCategory = async (categoryId: string) => {
 // ------------------------
 export const getBestSellers = async () => {
   const products = await getProducts();
-
-  return products.filter((p: any) => p.bestSeller === true);
+  return products.filter(p => p.bestSeller === true);
 };
