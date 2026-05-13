@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { getProductById, getRandomProducts } from "@/api/Product";
 import { addToCart } from "@/api/AddToCart";
 import ProductCard from "@/components/ProductCard";
+import BackButton from "@/components/BackButton";
 
 const COLORS = {
   primary: "#d25a58",
@@ -114,19 +115,16 @@ const ProductDetails = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <BackButton />
       <View style={styles.screen}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>تفاصيل المنتج</Text>
-          <View style={{ width: 24 }} />
         </View>
-
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 }}
         >
+          <Text style={styles.headerTitle}>تفاصيل المنتج</Text>
+          <View style={{ width: 24 }} />
           <View style={[styles.imageCard, { height: height * 0.38 }]}>
             <Image
               source={{ uri: currentImage }}
@@ -162,7 +160,14 @@ const ProductDetails = () => {
             <View style={styles.priceQuantityRow}>
               <View>
                 <Text style={styles.price}>₪{product.price}</Text>
-                <Text style={{ textAlign: 'right', color: '#888', fontSize: 12, marginTop: 4 }}>
+                <Text
+                  style={{
+                    textAlign: "right",
+                    color: "#888",
+                    fontSize: 12,
+                    marginTop: 4,
+                  }}
+                >
                   المتوفر: {product.stock || 0} قطع
                 </Text>
               </View>
@@ -170,7 +175,9 @@ const ProductDetails = () => {
               <View style={styles.quantityContainerInline}>
                 <TouchableOpacity
                   style={styles.qtyButton}
-                  onPress={() => setQuantity((prev: number) => Math.max(1, prev - 1))}
+                  onPress={() =>
+                    setQuantity((prev: number) => Math.max(1, prev - 1))
+                  }
                 >
                   <Text style={styles.qtyText}>-</Text>
                 </TouchableOpacity>
@@ -187,7 +194,10 @@ const ProductDetails = () => {
             </View>
 
             <TouchableOpacity
-              style={[styles.inlineAddToCartButton, addingToCart && { opacity: 0.7 }]}
+              style={[
+                styles.inlineAddToCartButton,
+                addingToCart && { opacity: 0.7 },
+              ]}
               onPress={handleAddToCart}
               disabled={addingToCart}
             >
@@ -290,9 +300,9 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.text,
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#111",
   },
   imageCard: {
     marginHorizontal: 20,

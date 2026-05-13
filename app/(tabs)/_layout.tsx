@@ -9,13 +9,12 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="Product" options={{ title: "Product" }} />
       <Tabs.Screen name="CategotyPage" options={{ title: "Category" }} />
-
-      
       <Tabs.Screen name="AddToCartPage" options={{ href: null }} />
       <Tabs.Screen name="productdetails" options={{ href: null }} />
       <Tabs.Screen name="ID" options={{ href: null }} />          
       <Tabs.Screen name="CategoryCard" options={{ href: null }} />
       <Tabs.Screen name="admin" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );
 }

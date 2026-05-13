@@ -1,9 +1,6 @@
 import { db } from "./firebase";
 import { collection, doc, addDoc, getDocs, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 
-// ------------------------
-// إنشاء منتج جديد
-// ------------------------
 export const createProduct = async (product: {
   title: string;
   price: number;
@@ -29,9 +26,6 @@ export const createProduct = async (product: {
   return await addDoc(collection(db, "products"), payload);
 };
 
-// ------------------------
-// جلب كل المنتجات
-// ------------------------
 export const getProducts = async () => {
   const querySnapshot = await getDocs(collection(db, "products"));
   return querySnapshot.docs.map(doc => ({
@@ -40,9 +34,6 @@ export const getProducts = async () => {
   } as any));
 };
 
-// ------------------------
-// حذف منتج
-// ------------------------
 export const deleteProduct = async (id: string) => {
   try {
     const docRef = doc(db, "products", id);
@@ -54,9 +45,6 @@ export const deleteProduct = async (id: string) => {
   }
 };
 
-// ------------------------
-// تحديث منتج
-// ------------------------
 export const updateProduct = async (id: string, product: any) => {
   const docRef = doc(db, "products", id);
   const cleanData: any = {};
@@ -70,9 +58,6 @@ export const updateProduct = async (id: string, product: any) => {
   return await updateDoc(docRef, cleanData);
 };
 
-// ------------------------
-// جلب منتج واحد حسب ID
-// ------------------------
 export const getProductById = async (id: string) => {
   const docRef = doc(db, "products", id);
   const docSnap = await getDoc(docRef);
@@ -82,9 +67,6 @@ export const getProductById = async (id: string) => {
   throw new Error("Product not found");
 };
 
-// ------------------------
-// جلب منتجات عشوائية (مبسطة للـ SDK)
-// ------------------------
 export const getRandomProducts = async (currentProductId?: string, limit: number = 4) => {
   const products = await getProducts();
   const filtered = currentProductId 
@@ -94,17 +76,11 @@ export const getRandomProducts = async (currentProductId?: string, limit: number
   return filtered.sort(() => 0.5 - Math.random()).slice(0, limit);
 };
 
-// ------------------------
-// جلب المنتجات حسب الكاتيغوري
-// ------------------------
 export const getProductsByCategory = async (categoryId: string) => {
   const products = await getProducts();
   return products.filter(p => p.categoryId === categoryId);
 };
 
-// ------------------------
-// جلب المنتجات Best Seller
-// ------------------------
 export const getBestSellers = async () => {
   const products = await getProducts();
   return products.filter(p => p.bestSeller === true);
