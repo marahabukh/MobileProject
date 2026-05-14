@@ -1,18 +1,18 @@
-import React, { useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  useWindowDimensions,
-  RefreshControl,
-} from "react-native";
+import { getProducts } from "@/api/Product";
+import BackButton from "@/components/BackButton";
+import ProductCard from "@/components/ProductCard";
+import SearchComponent from "@/components/SearchComponent";
 import SortComponent, { SortOption } from "@/components/SortComponent";
 import { useQuery } from "@tanstack/react-query";
-import ProductCard from "@/components/ProductCard";
-import { getProducts } from "@/api/Product";
-import SearchComponent from "@/components/SearchComponent";
-import BackButton from "@/components/BackButton";
+import React, { useMemo, useState } from "react";
+import {
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 export default function ProductsScreen() {
   const { width } = useWindowDimensions();
@@ -37,7 +37,7 @@ export default function ProductsScreen() {
       const searchText = search.trim().toLowerCase();
 
       result = result.filter((item: any) =>
-        (item.title || item.name || "").toLowerCase().includes(searchText)
+        (item.title || item.name || "").toLowerCase().includes(searchText),
       );
     }
 
@@ -63,36 +63,30 @@ export default function ProductsScreen() {
   }
 
   if (error instanceof Error) {
-    return <Text style={styles.error}>error {error.message}</Text>;
+    return <Text style={styles.error}>خطأ{error.message}</Text>;
   }
 
   const numColumns = width > 1000 ? 4 : width > 700 ? 3 : 2;
 
   return (
     <View style={styles.container}>
-      <View style={{ marginTop: 50 }}>
-  <BackButton />
-</View>
-      <Text style={styles.title}>منتجاتنا </Text>
-
-      <SearchComponent
-        value={search}
-        onChangeText={setSearch}
-        placeholder="...ابحث عن منتج"
-      />
-
-      <SortComponent sortBy={sortBy} setSortBy={setSortBy} />
-
       <FlatList
         data={filteredAndSortedProducts}
         keyExtractor={(item: any) => item.id.toString()}
         renderItem={({ item }) => (
-          <ProductCard
-            id={item.id}
-            title={item.title}
-            price={item.price}
-            image={item.image}
-          />
+          <View
+            style={[
+              styles.cardWrapper,
+              { width: `${100 / numColumns}%`, paddingHorizontal: 4 },
+            ]}
+          >
+            <ProductCard
+              id={item.id}
+              title={item.title}
+              price={item.price}
+              image={item.image}
+            />
+          </View>
         )}
         numColumns={numColumns}
         key={`flatlist-${numColumns}`}
@@ -106,6 +100,20 @@ export default function ProductsScreen() {
             colors={["#7a1d4e"]}
             tintColor="#7a1d4e"
           />
+        }
+        ListHeaderComponent={
+          <>
+            <View style={{ marginTop: 50 }}>
+              <BackButton />
+            </View>
+            <Text style={styles.title}>منتجاتنا </Text>
+            <SearchComponent
+              value={search}
+              onChangeText={setSearch}
+              placeholder="...ابحث عن منتج"
+            />
+            <SortComponent sortBy={sortBy} setSortBy={setSortBy} />
+          </>
         }
       />
     </View>
@@ -132,7 +140,10 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     justifyContent: "flex-start",
-    gap: 16,
+    gap: 5,
+    marginBottom: 5,
+  },
+  cardWrapper: {
     marginBottom: 20,
   },
   loading: {
