@@ -46,7 +46,9 @@ export default function ProfileScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [successMessage, setSuccessMessage] = useState("");
+  const [imageSuccessMessage, setImageSuccessMessage] = useState("");
+  const [nameSuccessMessage, setNameSuccessMessage] = useState("");
+  const [passwordSuccessMessage, setPasswordSuccessMessage] = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -70,12 +72,25 @@ export default function ProfileScreen() {
     return unsubscribe;
   }, []);
 
-  const showSuccess = (message: string) => {
-    setSuccessMessage(message);
+  const clearSuccessMessages = () => {
+    setImageSuccessMessage("");
+    setNameSuccessMessage("");
+    setPasswordSuccessMessage("");
+  };
 
-    setTimeout(() => {
-      setSuccessMessage("");
-    }, 3500);
+  const showImageSuccess = () => {
+    setImageSuccessMessage("تم تحديث صورة الملف الشخصي بنجاح");
+    setTimeout(() => setImageSuccessMessage(""), 3500);
+  };
+
+  const showNameSuccess = () => {
+    setNameSuccessMessage("تم تحديث الاسم بنجاح");
+    setTimeout(() => setNameSuccessMessage(""), 3500);
+  };
+
+  const showPasswordSuccess = () => {
+    setPasswordSuccessMessage("تم تغيير كلمة المرور بنجاح");
+    setTimeout(() => setPasswordSuccessMessage(""), 3500);
   };
 
   const refreshUser = async () => {
@@ -104,7 +119,7 @@ export default function ProfileScreen() {
 
     try {
       setSavingName(true);
-      setSuccessMessage("");
+      clearSuccessMessages();
 
       await updateProfile(auth.currentUser, {
         displayName: name.trim(),
@@ -113,7 +128,7 @@ export default function ProfileScreen() {
       await refreshUser();
 
       setEditingName(false);
-      showSuccess("الاسم تم تحديثه بنجاح");
+      showNameSuccess();
     } catch (error) {
       Alert.alert("خطأ", "حدث خطأ أثناء تحديث الاسم");
     } finally {
@@ -185,7 +200,7 @@ export default function ProfileScreen() {
   };
 
   const selectProfileImage = () => {
-    setSuccessMessage("");
+    clearSuccessMessages();
 
     Alert.alert(
       "تعديل صورة الملف الشخصي",
@@ -203,7 +218,7 @@ export default function ProfileScreen() {
 
     try {
       setUploadingImage(true);
-      setSuccessMessage("");
+      clearSuccessMessages();
 
       const { secureUrl } = await uploadImageToCloudinary(imageUri);
 
@@ -213,7 +228,7 @@ export default function ProfileScreen() {
 
       await refreshUser();
 
-      showSuccess("صورة الملف الشخصي تم تحديثها بنجاح");
+      showImageSuccess();
     } catch (error: any) {
       console.error("Profile image upload error:", error);
 
@@ -250,7 +265,7 @@ export default function ProfileScreen() {
 
     try {
       setChangingPassword(true);
-      setSuccessMessage("");
+      clearSuccessMessages();
 
       await updatePassword(auth.currentUser, newPassword);
 
@@ -259,7 +274,7 @@ export default function ProfileScreen() {
       setShowNewPassword(false);
       setShowConfirmPassword(false);
 
-      showSuccess("كلمة المرور تم تغييرها بنجاح");
+      showPasswordSuccess();
     } catch (error: any) {
       if (error.code === "auth/requires-recent-login") {
         Alert.alert(
@@ -313,13 +328,6 @@ export default function ProfileScreen() {
           <Text style={styles.subtitle}>إدارة معلومات حسابك</Text>
         </View>
 
-        {successMessage ? (
-          <View style={styles.successToast}>
-            <Ionicons name="checkmark-circle" size={22} color="#2e7d32" />
-            <Text style={styles.successToastText}>{successMessage}</Text>
-          </View>
-        ) : null}
-
         <View style={styles.profileCard}>
           <TouchableOpacity
             style={styles.imageContainer}
@@ -344,6 +352,15 @@ export default function ProfileScreen() {
 
           <Text style={styles.changePhotoText}>تعديل صورة الملف الشخصي</Text>
 
+          {imageSuccessMessage ? (
+            <View style={styles.imageSuccessBox}>
+              <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
+              <Text style={styles.fieldSuccessText}>
+                {imageSuccessMessage}
+              </Text>
+            </View>
+          ) : null}
+
           <View style={styles.fieldBox}>
             <Text style={styles.label}>الاسم</Text>
 
@@ -352,17 +369,23 @@ export default function ProfileScreen() {
                 value={name}
                 onChangeText={setName}
                 editable={editingName}
-                placeholder="Enter your name"
+                placeholder="اكتب اسمك"
                 placeholderTextColor="#999"
                 style={[styles.input, !editingName && styles.disabledInput]}
               />
 
               {editingName ? (
-                <TouchableOpacity style={styles.iconButton} onPress={saveName}>
+                <TouchableOpacity
+                  style={styles.saveNameButton}
+                  onPress={saveName}
+                >
                   {savingName ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Ionicons name="checkmark" size={23} color="#fff" />
+                    <>
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                      <Text style={styles.saveNameText}>حفظ</Text>
+                    </>
                   )}
                 </TouchableOpacity>
               ) : (
@@ -370,13 +393,22 @@ export default function ProfileScreen() {
                   style={styles.iconButton}
                   onPress={() => {
                     setEditingName(true);
-                    setSuccessMessage("");
+                    clearSuccessMessages();
                   }}
                 >
                   <Ionicons name="create-outline" size={22} color="#fff" />
                 </TouchableOpacity>
               )}
             </View>
+
+            {nameSuccessMessage ? (
+              <View style={styles.fieldSuccessBox}>
+                <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
+                <Text style={styles.fieldSuccessText}>
+                  {nameSuccessMessage}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.fieldBox}>
@@ -450,6 +482,15 @@ export default function ProfileScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          {passwordSuccessMessage ? (
+            <View style={styles.fieldSuccessBox}>
+              <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
+              <Text style={styles.fieldSuccessText}>
+                {passwordSuccessMessage}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -474,6 +515,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f4f4f4",
     paddingHorizontal: 16,
+    paddingTop: 70,
   },
 
   center: {
@@ -492,7 +534,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    marginTop: 50,
+    marginTop: 10,
     marginBottom: 18,
   },
 
@@ -506,26 +548,6 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontSize: 14,
     color: "#777",
-  },
-
-  successToast: {
-    minHeight: 52,
-    borderRadius: 16,
-    backgroundColor: "#eaf6ec",
-    borderWidth: 1,
-    borderColor: "#c8e6c9",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    gap: 10,
-    marginBottom: 16,
-  },
-
-  successToastText: {
-    flex: 1,
-    color: "#2e7d32",
-    fontSize: 15,
-    fontWeight: "800",
   },
 
   profileCard: {
@@ -612,6 +634,7 @@ const styles = StyleSheet.create({
     color: "#111",
     borderWidth: 1,
     borderColor: "#eee",
+    textAlign: "right",
   },
 
   disabledInput: {
@@ -628,6 +651,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  saveNameButton: {
+    minWidth: 68,
+    height: 52,
+    borderRadius: 15,
+    backgroundColor: "#d95b5b",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 12,
+  },
+
+  saveNameText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
   displayBox: {
     width: "100%",
     minHeight: 52,
@@ -642,6 +683,7 @@ const styles = StyleSheet.create({
   displayText: {
     fontSize: 16,
     color: "#666",
+    textAlign: "right",
   },
 
   actionCard: {
@@ -661,6 +703,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111",
     marginBottom: 16,
+    textAlign: "right",
   },
 
   passwordInputWrapper: {
@@ -681,6 +724,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     fontSize: 16,
     color: "#111",
+    textAlign: "right",
   },
 
   eyeButton: {
@@ -688,6 +732,42 @@ const styles = StyleSheet.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  imageSuccessBox: {
+    width: "100%",
+    minHeight: 42,
+    borderRadius: 14,
+    backgroundColor: "#eaf6ec",
+    borderWidth: 1,
+    borderColor: "#c8e6c9",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    gap: 8,
+    marginTop: 10,
+  },
+
+  fieldSuccessBox: {
+    width: "100%",
+    minHeight: 42,
+    borderRadius: 14,
+    backgroundColor: "#eaf6ec",
+    borderWidth: 1,
+    borderColor: "#c8e6c9",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    gap: 8,
+    marginTop: 10,
+  },
+
+  fieldSuccessText: {
+    flex: 1,
+    color: "#2e7d32",
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "right",
   },
 
   changePasswordButton: {
