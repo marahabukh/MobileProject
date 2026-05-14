@@ -1,23 +1,18 @@
+import BottomNavigation from "@/components/Buttomnavigation";
+import CategoryCard from "@/components/CategoryCard";
+import ProductCard from "@/components/ProductCard";
+import { useOfflineData } from "@/hooks/useOfflineData";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
   FlatList,
-  TouchableOpacity,
-  useWindowDimensions,
   ImageBackground,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity, useWindowDimensions,
+  View,
 } from "react-native";
-import ProductCard from "@/components/ProductCard";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-
-import { getCategories } from "@/api/Category";
-import { getBestSellers } from "@/api/Product";
-import { getHero } from "@/api/HereSection";
-import CategoryCard from "@/components/CategoryCard";
-import BottomNavigation from "@/components/Buttomnavigation";   
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -25,21 +20,8 @@ export default function HomeScreen() {
   const cardWidth = width * 0.4;
   const cardMargin = width * 0.03;
 
- 
-  const { data: hero, isLoading: heroLoading } = useQuery({
-    queryKey: ["hero"],
-    queryFn: getHero,
-  });
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getCategories,
-  });
-
-  const { data: bestSellers = [] } = useQuery({
-    queryKey: ["bestSellers"],
-    queryFn: getBestSellers,
-  });
+ const { hero, categories, bestSellers, heroLoading } = useOfflineData();
 
   return (
     <View style={styles.mainContainer}>
