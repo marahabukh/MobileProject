@@ -31,6 +31,7 @@ onlineManager.setEventListener((setOnline) => {
   });
 });
 
+//offline 
 function OfflineBanner() {
   const [isConnected, setIsConnected] = useState(true);
 
