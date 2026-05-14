@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     borderRadius: 18,
-    padding: 16, // 👈 نفس ProductCard
+    padding: 16,
     marginBottom: 20,
 
     elevation: 4,

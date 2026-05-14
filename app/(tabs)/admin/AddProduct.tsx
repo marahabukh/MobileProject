@@ -22,6 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
+import StatusDialog from "@/components/StatusDialog";
 
 const { width } = Dimensions.get("window");
 
@@ -42,13 +43,15 @@ export default function AddProduct() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
-  const [image, setImage] = useState("");
+  const [images, setImages] = useState<string[]>([""]);
   const [stock, setStock] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [bestSeller, setBestSeller] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchingCats, setFetchingCats] = useState(true);
+  const [statusVisible, setStatusVisible] = useState(false);
+  const [statusConfig, setStatusConfig] = useState({ type: "success" as "success" | "error", title: "", message: "" });
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -73,10 +76,45 @@ export default function AddProduct() {
     }
   }, []);
 
+  const addImageField = () => {
+    triggerHaptic();
+    setImages([...images, ""]);
+  };
+
+  const updateImageUri = (text: string, index: number) => {
+    const newImages = [...images];
+    newImages[index] = text;
+    setImages(newImages);
+  };
+
+  const removeImageField = (index: number) => {
+    if (images.length > 1) {
+      triggerHaptic();
+      const newImages = images.filter((_, i) => i !== index);
+      setImages(newImages);
+    }
+  };
+
   const handleAddProduct = async () => {
-    if (!title || !price || !image) {
+    const validImages = images.filter(img => img.trim() !== "");
+    const numericPrice = Number(price);
+
+    if (!title) {
       triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-      return Alert.alert("Required Fields", "Please fill in all details.");
+      setStatusConfig({ type: "error", title: "Missing Name", message: "Please enter a product name." });
+      return setStatusVisible(true);
+    }
+
+    if (!price || validImages.length === 0) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      setStatusConfig({ type: "error", title: "Required Fields", message: "Please fill in price and at least one image." });
+      return setStatusVisible(true);
+    }
+
+    if (isNaN(numericPrice) || numericPrice <= 0) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      setStatusConfig({ type: "error", title: "Invalid Price", message: "Price must be a positive number." });
+      return setStatusVisible(true);
     }
 
     setLoading(true);
@@ -84,8 +122,8 @@ export default function AddProduct() {
     try {
       await createProduct({
         title,
-        price: Number(price),
-        image,
+        price: numericPrice,
+        images: validImages,
         categoryId: categoryId || "",
         bestSeller,
         stock: Number(stock || 0),
@@ -94,10 +132,12 @@ export default function AddProduct() {
       await queryClient.invalidateQueries({ queryKey: ["admin-products"] });
 
       triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
-      Alert.alert("Success! 🎉", "Product listed successfully.");
-      router.back();
+      setStatusConfig({ type: "success", title: "Success! 🎉", message: "Product listed successfully." });
+      setStatusVisible(true);
+      setTimeout(() => router.back(), 1500);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save.");
+      setStatusConfig({ type: "error", title: "Error", message: error.message || "Failed to save." });
+      setStatusVisible(true);
     } finally {
       setLoading(false);
     }
@@ -113,7 +153,6 @@ export default function AddProduct() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
         <Animated.View entering={FadeInDown.duration(600)} style={styles.header}>
           <TouchableOpacity 
             onPress={() => {
@@ -128,21 +167,26 @@ export default function AddProduct() {
           <View style={{ width: 48 }} /> 
         </Animated.View>
 
-        {/* Image Preview Card */}
-        <Animated.View entering={FadeInDown.delay(100)} style={styles.imagePreviewCard}>
-          {image ? (
-            <Image 
-              source={{ uri: image }} 
-              style={styles.previewImage} 
-              contentFit="cover"
-              transition={500}
-            />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Ionicons name="image-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.placeholderText}>Enter Image URL below to preview</Text>
-            </View>
-          )}
+        <Animated.View entering={FadeInDown.delay(100)} style={styles.imagePreviewScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.previewContainer}>
+            {images.filter(img => img.trim() !== "").length > 0 ? (
+              images.filter(img => img.trim() !== "").map((img, idx) => (
+                <View key={idx} style={styles.imagePreviewCard}>
+                  <Image 
+                    source={{ uri: img }} 
+                    style={styles.previewImage} 
+                    contentFit="cover"
+                    transition={500}
+                  />
+                </View>
+              ))
+            ) : (
+              <View style={[styles.imagePreviewCard, styles.placeholderCard]}>
+                <Ionicons name="image-outline" size={48} color={COLORS.textMuted} />
+                <Text style={styles.placeholderText}>Enter URLs to preview</Text>
+              </View>
+            )}
+          </ScrollView>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200)} style={styles.formContainer}>
@@ -181,17 +225,30 @@ export default function AddProduct() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Image URL</Text>
-            <TextInput
-              placeholder="https://images.unsplash.com/..."
-              value={image}
-              onChangeText={setImage}
-              style={styles.input}
-              autoCapitalize="none"
-            />
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Image URLs</Text>
+              <TouchableOpacity onPress={addImageField} style={styles.addButtonSmall}>
+                <Ionicons name="add-circle" size={24} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+            {images.map((img, index) => (
+              <View key={index} style={styles.multiInputWrapper}>
+                <TextInput
+                  placeholder={`Image URL ${index + 1}`}
+                  value={img}
+                  onChangeText={(text) => updateImageUri(text, index)}
+                  style={[styles.input, { flex: 1 }]}
+                  autoCapitalize="none"
+                />
+                {images.length > 1 && (
+                  <TouchableOpacity onPress={() => removeImageField(index)} style={styles.removeButton}>
+                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
           </View>
 
-          {/* Categories */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Select Category</Text>
             {fetchingCats ? (
@@ -265,6 +322,13 @@ export default function AddProduct() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+      <StatusDialog
+        visible={statusVisible}
+        type={statusConfig.type}
+        title={statusConfig.title}
+        message={statusConfig.message}
+        onClose={() => setStatusVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -304,12 +368,20 @@ const styles = StyleSheet.create({
     color: COLORS.textMain,
     letterSpacing: -0.5,
   },
+  imagePreviewScroll: {
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  previewContainer: {
+    flexDirection: "row",
+  },
   imagePreviewCard: {
-    width: "100%",
+    width: 200,
     height: 200,
     backgroundColor: COLORS.white,
     borderRadius: 24,
-    marginBottom: 32,
+    marginRight: 16,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -327,24 +399,30 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  placeholderCard: {
+    width: width - 48,
+  },
   previewImage: {
     width: "100%",
     height: "100%",
-  },
-  imagePlaceholder: {
-    alignItems: "center",
-    gap: 12,
   },
   placeholderText: {
     color: COLORS.textMuted,
     fontSize: 14,
     fontWeight: "500",
+    marginTop: 12,
   },
   formContainer: {
     gap: 20,
   },
   inputGroup: {
     gap: 8,
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
   },
   label: {
     fontSize: 14,
@@ -360,6 +438,20 @@ const styles = StyleSheet.create({
     color: COLORS.textMain,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  multiInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  },
+  addButtonSmall: {
+    padding: 4,
+  },
+  removeButton: {
+    padding: 8,
+    backgroundColor: "#FFF0F0",
+    borderRadius: 12,
   },
   row: {
     flexDirection: "row",

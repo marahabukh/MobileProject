@@ -1,12 +1,10 @@
-import { getCartItems, removeFromCart, updateCartItem } from "@/api/AddToCart";
+import { useCart } from "@/hooks/useCart";
 import BackButton from "@/components/BackButton";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -14,6 +12,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  Alert,
 } from "react-native";
 
 const accentRed = "#d25a58";
@@ -26,18 +25,15 @@ const greenFree = "#2E7D32";
 export default function AddtoCartpage() {
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 1000;
-  const queryClient = useQueryClient();
-
+  
   const {
-    data: cartItems = [],
+    cartItems,
     isLoading,
+    subtotal,
     refetch,
-  } = useQuery({
-    queryKey: ["cart"],
-    queryFn: getCartItems,
-    staleTime: 0,
-    refetchInterval: 5000, // poll every 5 seconds while tab is open
-  });
+    updateQuantity,
+    removeItem: removeItemMutation
+  } = useCart();
 
   // Refetch immediately every time this tab comes into focus
   useFocusEffect(
@@ -46,86 +42,21 @@ export default function AddtoCartpage() {
     }, [refetch])
   );
 
-  // 2. Update Quantity Mutation
-  const mutationUpdate = useMutation({
-    mutationFn: ({ id, quantity }: { id: string | number; quantity: number }) =>
-      updateCartItem(String(id), quantity),
-
-    onMutate: async (newVariable) => {
-      await queryClient.cancelQueries({ queryKey: ["cart"] });
-      const previousCart = queryClient.getQueryData(["cart"]);
-
-      queryClient.setQueryData(["cart"], (old: any) =>
-        old?.map((item: any) =>
-          String(item.id) === String(newVariable.id)
-            ? { ...item, quantity: newVariable.quantity }
-            : item
-        )
-      );
-      return { previousCart };
-    },
-
-    onError: (err, newVariable, context) => {
-      queryClient.setQueryData(["cart"], context?.previousCart);
-      Alert.alert("خطأ", "فشل تحديث الكمية");
-    },
-
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-    },
-  });
-
-  // 3. DELETE Mutation - FIXED
-  const mutationDelete = useMutation({
-    mutationFn: (id: string | number) => removeFromCart(String(id)),
-
-    onMutate: async (deletedId) => {
-      await queryClient.cancelQueries({ queryKey: ["cart"] });
-      const previousCart = queryClient.getQueryData(["cart"]);
-
-      // Optimistic delete with better safety
-      queryClient.setQueryData(["cart"], (old: any) => {
-        if (!Array.isArray(old)) return old;
-        return old.filter((item: any) => String(item.id) !== String(deletedId));
-      });
-
-      return { previousCart };
-    },
-
-    onSuccess: () => {
-      console.log("Item deleted successfully from server");
-    },
-
-    onError: (err, id, context) => {
-      queryClient.setQueryData(["cart"], context?.previousCart);
-      Alert.alert("خطأ", "لم يتمكن النظام من حذف المنتج");
-    },
-
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-    },
-  });
-
-  const increaseQty = (id: string | number, qty: any) => {
-    mutationUpdate.mutate({ id, quantity: Number(qty || 0) + 1 });
+  const increaseQty = (id: string, qty: number) => {
+    updateQuantity(id, qty + 1);
   };
 
-  const decreaseQty = (id: string | number, qty: any) => {
-    const newQty = Math.max(1, Number(qty || 1) - 1);
-    mutationUpdate.mutate({ id, quantity: newQty });
+  const decreaseQty = (id: string, qty: number) => {
+    if (qty > 1) {
+      updateQuantity(id, qty - 1);
+    }
   };
 
-  const removeItem = (id: string | number) => {
-    mutationDelete.mutate(id as string);
+  const removeItem = (id: string) => {
+    removeItemMutation(id);
   };
 
   // Calculations
-  const subtotal = Array.isArray(cartItems)
-    ? cartItems.reduce((sum: number, item: any) => {
-      return sum + Number(item.price || 0) * Number(item.quantity || 1);
-    }, 0)
-    : 0;
-
   const discount = subtotal * 0.2;
   const total = subtotal - discount;
 
@@ -206,8 +137,15 @@ export default function AddtoCartpage() {
                             <Text style={styles.qtyValue}>{item.quantity || 1}</Text>
 
                             <TouchableOpacity
-                              style={styles.qtyCircle}
-                              onPress={() => increaseQty(item.id, item.quantity)}
+                              style={[styles.qtyCircle, (item.quantity >= (item.stock || 0)) && { opacity: 0.3 }]}
+                              onPress={() => {
+                                if (item.quantity < (item.stock || 0)) {
+                                  increaseQty(item.id, item.quantity);
+                                } else {
+                                  Alert.alert("عذراً", "لقد وصلت للحد الأقصى للمتوفر");
+                                }
+                              }}
+                              disabled={item.quantity >= (item.stock || 0)}
                             >
                               <Text style={styles.qtyCircleText}>+</Text>
                             </TouchableOpacity>

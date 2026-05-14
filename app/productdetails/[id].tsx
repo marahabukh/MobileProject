@@ -15,7 +15,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getProductById, getRandomProducts } from "@/api/Product";
-import { addToCart } from "@/api/AddToCart";
+import { useCart } from "@/hooks/useCart";
 import ProductCard from "@/components/ProductCard";
 import BackButton from "@/components/BackButton";
 
@@ -42,6 +42,8 @@ const ProductDetails = () => {
 
   const [randomProducts, setRandomProducts] = useState<any[]>([]);
   const [loadingRandomProducts, setLoadingRandomProducts] = useState(false);
+  
+  const { addItem } = useCart();
 
   useEffect(() => {
     if (id) {
@@ -88,12 +90,18 @@ const ProductDetails = () => {
     try {
       if (!product) return;
       setAddingToCart(true);
-      await addToCart({
+      if (product.stock <= 0) {
+        Alert.alert("عذراً", "هذا المنتج غير متوفر حالياً");
+        return;
+      }
+
+      await addItem({
         productId: String(product.id),
         title: product.title || product.name || "",
         price: Number(product.price || 0),
         image: currentImage,
         quantity,
+        stock: Number(product.stock || 0),
         size: selectedSize || "",
       });
       Alert.alert("تم إضافة المنتج إلى السلة بنجاح");
@@ -185,8 +193,15 @@ const ProductDetails = () => {
                 <Text style={styles.quantity}>{quantity}</Text>
 
                 <TouchableOpacity
-                  style={styles.qtyButton}
-                  onPress={() => setQuantity((prev: number) => prev + 1)}
+                  style={[styles.qtyButton, quantity >= (product?.stock || 0) && { opacity: 0.5 }]}
+                  onPress={() => {
+                    if (quantity < (product?.stock || 0)) {
+                      setQuantity((prev: number) => prev + 1);
+                    } else {
+                      Alert.alert("عذراً", "لقد وصلت للحد الأقصى للمتوفر");
+                    }
+                  }}
+                  disabled={quantity >= (product?.stock || 0)}
                 >
                   <Text style={styles.qtyText}>+</Text>
                 </TouchableOpacity>
@@ -199,10 +214,10 @@ const ProductDetails = () => {
                 addingToCart && { opacity: 0.7 },
               ]}
               onPress={handleAddToCart}
-              disabled={addingToCart}
+              disabled={addingToCart || product.stock <= 0}
             >
               <Text style={styles.buttonText}>
-                {addingToCart ? "جاري الإضافة..." : "إضافة إلى السلة"}
+                {product.stock <= 0 ? "غير متوفر" : (addingToCart ? "جاري الإضافة..." : "إضافة إلى السلة")}
               </Text>
             </TouchableOpacity>
 
