@@ -8,12 +8,13 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { getSecurely } from "../lib/SecureStorage";
+import { useAuth } from "../context/AuthContext";
 
 const { width, height } = Dimensions.get("window");
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { user, isLoading } = useAuth();
   
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.8);
@@ -28,16 +29,17 @@ export default function SplashScreen() {
       // Small delay to show the beautiful splash screen
       await new Promise(resolve => setTimeout(resolve, 2500));
       
-      const session = await getSecurely("user_session");
-      if (session) {
-        router.replace("/(tabs)");
-      } else {
-        router.replace("/Auth/login");
+      if (!isLoading) {
+        if (user) {
+          router.replace("/(tabs)");
+        } else {
+          router.replace("/Auth/login");
+        }
       }
     };
 
     checkSessionAndNavigate();
-  }, []);
+  }, [isLoading, user]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
