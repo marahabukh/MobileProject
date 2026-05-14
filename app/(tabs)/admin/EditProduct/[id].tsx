@@ -19,6 +19,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
+import StatusDialog from "@/components/StatusDialog";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -43,7 +44,7 @@ export default function EditProduct() {
   
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
-  const [image, setImage] = useState("");
+  const [images, setImages] = useState<string[]>([""]);
   const [stock, setStock] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -51,6 +52,8 @@ export default function EditProduct() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [statusVisible, setStatusVisible] = useState(false);
+  const [statusConfig, setStatusConfig] = useState({ type: "success" as "success" | "error", title: "", message: "" });
 
   useEffect(() => {
     const init = async () => {
@@ -64,7 +67,15 @@ export default function EditProduct() {
         if (product) {
           setTitle(product.title || "");
           setPrice(String(product.price || ""));
-          setImage(product.image || "");
+          
+          if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+            setImages(product.images);
+          } else if (product.image) {
+            setImages([product.image]);
+          } else {
+            setImages([""]);
+          }
+          
           setStock(String(product.stock || "0"));
           setCategoryId(product.categoryId || null);
           setBestSeller(!!product.bestSeller);
@@ -85,10 +96,45 @@ export default function EditProduct() {
     }
   }, []);
 
+  const addImageField = () => {
+    triggerHaptic();
+    setImages([...images, ""]);
+  };
+
+  const updateImageUri = (text: string, index: number) => {
+    const newImages = [...images];
+    newImages[index] = text;
+    setImages(newImages);
+  };
+
+  const removeImageField = (index: number) => {
+    if (images.length > 1) {
+      triggerHaptic();
+      const newImages = images.filter((_, i) => i !== index);
+      setImages(newImages);
+    }
+  };
+
   const handleUpdateProduct = async () => {
-    if (!title || !price || !image) {
+    const validImages = images.filter(img => img.trim() !== "");
+    const numericPrice = Number(price);
+
+    if (!title) {
       triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-      return Alert.alert("Required Fields", "Please fill in all details.");
+      setStatusConfig({ type: "error", title: "Missing Name", message: "Please enter a product name." });
+      return setStatusVisible(true);
+    }
+
+    if (!price || validImages.length === 0) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      setStatusConfig({ type: "error", title: "Required Fields", message: "Please fill in price and at least one image." });
+      return setStatusVisible(true);
+    }
+
+    if (isNaN(numericPrice) || numericPrice <= 0) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      setStatusConfig({ type: "error", title: "Invalid Price", message: "Price must be a positive number." });
+      return setStatusVisible(true);
     }
 
     setSaving(true);
@@ -96,8 +142,8 @@ export default function EditProduct() {
     try {
       await updateProduct(id as string, {
         title,
-        price: Number(price),
-        image,
+        price: numericPrice,
+        images: validImages,
         categoryId,
         bestSeller,
         stock: Number(stock),
@@ -105,10 +151,12 @@ export default function EditProduct() {
 
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
       triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
-      Alert.alert("Success! 🎉", "Product updated successfully.");
-      router.back();
+      setStatusConfig({ type: "success", title: "Success! 🎉", message: "Product updated successfully." });
+      setStatusVisible(true);
+      setTimeout(() => router.back(), 1500);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to update product.");
+      setStatusConfig({ type: "error", title: "Error", message: error.message || "Failed to update product." });
+      setStatusVisible(true);
     } finally {
       setSaving(false);
     }
@@ -147,19 +195,26 @@ export default function EditProduct() {
           <View style={{ width: 48 }} /> 
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(100)} style={styles.imagePreviewCard}>
-          <Image 
-            source={{ uri: image || "https://via.placeholder.com/150" }} 
-            style={styles.previewImage} 
-            contentFit="cover"
-            transition={500}
-          />
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.6)"]}
-            style={styles.imageOverlay}
-          >
-            <Text style={styles.imageTitleOverlay}>{title || "Product Image"}</Text>
-          </LinearGradient>
+        <Animated.View entering={FadeInDown.delay(100)} style={styles.imagePreviewScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.previewContainer}>
+            {images.filter(img => img.trim() !== "").length > 0 ? (
+              images.filter(img => img.trim() !== "").map((img, idx) => (
+                <View key={idx} style={styles.imagePreviewCard}>
+                  <Image 
+                    source={{ uri: img }} 
+                    style={styles.previewImage} 
+                    contentFit="cover"
+                    transition={500}
+                  />
+                </View>
+              ))
+            ) : (
+              <View style={[styles.imagePreviewCard, styles.placeholderCard]}>
+                <Ionicons name="image-outline" size={48} color={COLORS.textMuted} />
+                <Text style={styles.placeholderText}>No images found</Text>
+              </View>
+            )}
+          </ScrollView>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200)} style={styles.formContainer}>
@@ -198,14 +253,28 @@ export default function EditProduct() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Image URL</Text>
-            <TextInput
-              placeholder="https://..."
-              value={image}
-              onChangeText={setImage}
-              style={styles.input}
-              autoCapitalize="none"
-            />
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Image URLs</Text>
+              <TouchableOpacity onPress={addImageField} style={styles.addButtonSmall}>
+                <Ionicons name="add-circle" size={24} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+            {images.map((img, index) => (
+              <View key={index} style={styles.multiInputWrapper}>
+                <TextInput
+                  placeholder={`Image URL ${index + 1}`}
+                  value={img}
+                  onChangeText={(text) => updateImageUri(text, index)}
+                  style={[styles.input, { flex: 1 }]}
+                  autoCapitalize="none"
+                />
+                {images.length > 1 && (
+                  <TouchableOpacity onPress={() => removeImageField(index)} style={styles.removeButton}>
+                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
           </View>
 
           <View style={styles.section}>
@@ -277,6 +346,13 @@ export default function EditProduct() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+      <StatusDialog
+        visible={statusVisible}
+        type={statusConfig.type}
+        title={statusConfig.title}
+        message={statusConfig.message}
+        onClose={() => setStatusVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -328,15 +404,25 @@ const styles = StyleSheet.create({
     color: COLORS.textMain,
     letterSpacing: -0.5,
   },
+  imagePreviewScroll: {
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  previewContainer: {
+    flexDirection: "row",
+  },
   imagePreviewCard: {
-    width: "100%",
+    width: 200,
     height: 200,
     backgroundColor: COLORS.white,
     borderRadius: 24,
-    marginBottom: 32,
+    marginRight: 16,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -349,29 +435,30 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  placeholderCard: {
+    width: width - 48,
+  },
   previewImage: {
     width: "100%",
     height: "100%",
   },
-  imageOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    paddingHorizontal: 20,
-    justifyContent: "center",
-  },
-  imageTitleOverlay: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
+  placeholderText: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    fontWeight: "500",
+    marginTop: 12,
   },
   formContainer: {
     gap: 20,
   },
   inputGroup: {
     gap: 8,
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
   },
   label: {
     fontSize: 14,
@@ -387,6 +474,20 @@ const styles = StyleSheet.create({
     color: COLORS.textMain,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  multiInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  },
+  addButtonSmall: {
+    padding: 4,
+  },
+  removeButton: {
+    padding: 8,
+    backgroundColor: "#FFF0F0",
+    borderRadius: 12,
   },
   row: {
     flexDirection: "row",

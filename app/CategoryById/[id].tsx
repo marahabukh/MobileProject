@@ -152,7 +152,7 @@ export default function CategoryProductsScreen() {
       ListHeaderComponent={
         <>
 
-  <View style={{ marginTop: 50 }}>
+  <View style={{ marginTop: 10 }}>
   <BackButton />
 </View>
         <Text style={styles.header}>منتجات {categoryName}</Text>

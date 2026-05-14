@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { 
   View, 
   TextInput, 
@@ -11,34 +11,82 @@ import {
   StyleSheet, 
   ActivityIndicator 
 } from "react-native";
-import { createCategory } from "@/api/Category";
+import { getCategoryById, updateCategory } from "@/api/Category";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import StatusDialog from "@/components/StatusDialog";
 
-export default function AddCategory() {
+export default function EditCategory() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const queryClient = useQueryClient();
+  
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
-  const handleAddCategory = async () => {
+
+  const [statusVisible, setStatusVisible] = useState(false);
+  const [statusConfig, setStatusConfig] = useState({ type: "success" as "success" | "error", title: "", message: "" });
+
+  useEffect(() => {
+    const fetchCategory = async () => {
+      if (!id) return;
+      try {
+        const data = await getCategoryById(String(id));
+        if (data) {
+          setName(data.name);
+          setImage(data.image || "");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchCategory();
+  }, [id]);
+
+  const handleUpdateCategory = async () => {
     if (!name) return Alert.alert("Required", "Category name is missing.");
 
     setLoading(true);
     try {
-      await createCategory({ name, image });
+      await updateCategory(String(id), { name, image });
       await queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
-      Alert.alert("Awesome!", "New category has been added.");
-      router.back();
+      
+      setStatusConfig({
+        type: "success",
+        title: "Success",
+        message: "Category updated successfully."
+      });
+      setStatusVisible(true);
+      
+      setTimeout(() => {
+        router.back();
+      }, 1500);
     } catch (err: any) {
       console.error(err);
-      Alert.alert("Oops!", err.message || "Failed to create category.");
+      setStatusConfig({
+        type: "error",
+        title: "Oops!",
+        message: err.message || "Failed to update category."
+      });
+      setStatusVisible(true);
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#1A1A1A" />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -46,12 +94,11 @@ export default function AddCategory() {
       style={styles.container}
     >
       <ScrollView style={styles.scrollView}>
-   
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Category</Text>
+          <Text style={styles.headerTitle}>Edit Category</Text>
           <View style={{ width: 48 }} /> 
         </View>
 
@@ -81,23 +128,26 @@ export default function AddCategory() {
           <Text style={styles.helperText}>Attach a representative icon or photo.</Text>
         </View>
 
-      
         <TouchableOpacity 
           disabled={loading}
           style={[styles.submitButton, loading && { backgroundColor: "#A0A0A0" }]} 
-          onPress={handleAddCategory}
+          onPress={handleUpdateCategory}
         >
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={styles.submitText}>Create Category</Text>
+            <Text style={styles.submitText}>Save Changes</Text>
           )}
         </TouchableOpacity>
-
-        <View style={styles.footerIcon}>
-          <Ionicons name="shapes-outline" size={80} color="#E0E0E0" />
-        </View>
       </ScrollView>
+
+      <StatusDialog
+        visible={statusVisible}
+        type={statusConfig.type}
+        title={statusConfig.title}
+        message={statusConfig.message}
+        onClose={() => setStatusVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -106,6 +156,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FDFDFD",
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollView: {
     flex: 1,
@@ -170,10 +225,5 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
     fontSize: 18,
-  },
-  footerIcon: {
-    marginTop: 60,
-    alignItems: "center",
-    opacity: 0.5,
   },
 });
