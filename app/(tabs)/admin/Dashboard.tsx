@@ -564,7 +564,19 @@ export default function AdminDashboard() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerGreeting}>Welcome back,</Text>
+          <View style={styles.headerTitleRow}>
+            <Text style={styles.headerGreeting}>Welcome back,</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                triggerHaptic();
+                router.replace("/(tabs)");
+              }}
+              style={styles.backToHomeBtn}
+            >
+              <Ionicons name="home-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.backToHomeText}>Store</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.headerTitle}>Admin Panel</Text>
         </View>
         <TouchableOpacity
@@ -763,6 +775,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 24,
     marginBottom: 32,
+  },
+  headerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  backToHomeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  backToHomeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.primary,
   },
   headerGreeting: {
     fontSize: 14,
