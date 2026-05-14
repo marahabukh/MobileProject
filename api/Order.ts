@@ -1,5 +1,5 @@
 import { db } from "./firebase";
-import { collection, getDocs, query, orderBy, addDoc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc } from "firebase/firestore";
 import axiosInstance from "./ApiBase";
 
 type OrderItem = {
@@ -102,6 +102,7 @@ export const getOrders = async () => {
       const data = doc.data();
       return {
         id: doc.id,
+        ...data,
         total: Number(data.total || 0),
         subtotal: Number(data.subtotal || 0),
         shippingCost: Number(data.shippingCost || 0),
@@ -115,4 +116,9 @@ export const getOrders = async () => {
     console.error("SDK Get Orders Error:", error);
     return [];
   }
+};
+
+export const updateOrderStatus = async (orderId: string, status: string) => {
+  const docRef = doc(db, "orders", orderId);
+  return await updateDoc(docRef, { status });
 };

@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/api/firebase";
+import { useCart } from "@/hooks/useCart";
 
 const accentRed = "#d25a58";
 const softCard = "#FCFAF7";
@@ -18,6 +19,7 @@ const textMuted = "#8F8A83";
 export default function BottomNavigation() {
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const { count } = useCart();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -62,6 +64,11 @@ export default function BottomNavigation() {
           onPress={() => goToProtectedPage("/Cart/AddToCartPage")}
         >
           <Ionicons name="cart" size={28} color="#fff" />
+          {count > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{count > 99 ? "99+" : count}</Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -122,5 +129,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     boxShadow: "0px 8px 15px rgba(210,90,88,0.35)",
+  },
+  badge: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: "#fff",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "800",
   },
 });

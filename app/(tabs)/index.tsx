@@ -1,18 +1,25 @@
-import BottomNavigation from "@/components/Buttomnavigation";
-import CategoryCard from "@/components/CategoryCard";
-import ProductCard from "@/components/ProductCard";
-import { useOfflineData } from "@/hooks/useOfflineData";
-import { useRouter } from "expo-router";
 import React from "react";
 import {
-  FlatList,
-  ImageBackground,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity, useWindowDimensions,
   View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  FlatList,
+  TouchableOpacity,
+  useWindowDimensions,
+  ImageBackground,
+  RefreshControl,
 } from "react-native";
+import ProductCard from "@/components/ProductCard";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+
+import { getCategories } from "@/api/Category";
+import { getBestSellers } from "@/api/Product";
+import { getHero } from "@/api/HereSection";
+import CategoryCard from "@/components/CategoryCard";
+import BottomNavigation from "@/components/Buttomnavigation";   
+import ErrorView from "@/components/ErrorView";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -20,8 +27,45 @@ export default function HomeScreen() {
   const cardWidth = width * 0.4;
   const cardMargin = width * 0.03;
 
+  const { 
+    data: hero, 
+    isLoading: heroLoading, 
+    isError: heroError, 
+    refetch: refetchHero 
+  } = useQuery({
+    queryKey: ["hero"],
+    queryFn: getHero,
+  });
 
- const { hero, categories, bestSellers, heroLoading } = useOfflineData();
+  const { 
+    data: categories = [], 
+    isError: categoriesError, 
+    refetch: refetchCategories 
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: getCategories,
+  });
+
+  const { 
+    data: bestSellers = [], 
+    isError: bestSellersError, 
+    refetch: refetchBestSellers 
+  } = useQuery({
+    queryKey: ["bestSellers"],
+    queryFn: getBestSellers,
+  });
+
+  const onRefresh = () => {
+    refetchHero();
+    refetchCategories();
+    refetchBestSellers();
+  };
+
+  const hasError = heroError && categoriesError && bestSellersError && categories.length === 0 && bestSellers.length === 0;
+
+  if (hasError) {
+    return <ErrorView message="Failed to load content. Please check your connection." onRetry={onRefresh} />;
+  }
 
   return (
     <View style={styles.mainContainer}>
@@ -30,6 +74,9 @@ export default function HomeScreen() {
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={false} onRefresh={onRefresh} />
+        }
       >
        
         {heroLoading ? (
@@ -37,15 +84,15 @@ export default function HomeScreen() {
             <Text style={styles.heroTitle}>Loading...</Text>
           </View>
         ) : hero && hero.imageUrl ? (
-      <ImageBackground
-  source={require("../../assets/images/hero.png")}
-  style={styles.hero}
-  resizeMode="cover"
->
-  <View style={styles.heroOverlay}>
-    <Text style={styles.heroTitle}>Welcome 👋</Text>
-  </View>
-</ImageBackground>
+          <ImageBackground
+            source={require("../../assets/images/hero.png")}
+            style={styles.hero}
+            resizeMode="cover"
+          >
+            <View style={styles.heroOverlay}>
+              <Text style={styles.heroTitle}>Welcome 👋</Text>
+            </View>
+          </ImageBackground>
         ) : (
           <View style={styles.hero}>
             <Text style={styles.heroTitle}>Welcome 👋</Text>
@@ -61,29 +108,28 @@ export default function HomeScreen() {
         </View>
 
         
-       <FlatList
-  data={categories}
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  keyExtractor={(item) => item.id}
-  renderItem={({ item }) => (
-    <View
-      style={{
-        width: cardWidth,
-        marginRight: cardMargin,
-        marginTop: 15,
-      }}
-    >
-      <CategoryCard
-        id={item.id}
-        name={item.name}
-        image={item.image}
-      />
-    </View>
-  )}
-/>
-
-        
+        <FlatList
+          data={categories}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View
+              style={{
+                width: cardWidth,
+                marginRight: cardMargin,
+                marginTop: 15,
+                marginLeft: 16,
+              }}
+            >
+              <CategoryCard
+                id={item.id}
+                name={item.name}
+                image={item.image}
+              />
+            </View>
+          )}
+        />
 
         
         <View style={styles.sectionHeader}>
@@ -94,92 +140,62 @@ export default function HomeScreen() {
         </View>
 
         <FlatList
-  data={bestSellers}
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  keyExtractor={(item) => item.id}
-  contentContainerStyle={{ paddingHorizontal: 16 }}
-  renderItem={({ item }) => (
-    <View
-      style={{
-        width: cardWidth,
-        marginRight: 6, 
-        marginTop: 15,
-      }}
-    >
-      <ProductCard
-        id={item.id}
-        title={item.title}
-        price={item.price}
-        image={item.image}
-      />
-    </View>
-  )}
-/>
+          data={bestSellers}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          renderItem={({ item }) => (
+            <View
+              style={{
+                width: cardWidth,
+                marginRight: 6, 
+                marginTop: 15,
+              }}
+            >
+              <ProductCard
+                id={item.id}
+                title={item.title}
+                price={item.price}
+                image={item.image}
+              />
+            </View>
+          )}
+        />
           
-    
-       
         <View style={{ height: 20 }} />
       </ScrollView>
 
-    
       <BottomNavigation />
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: "#F6F6F6",
   },
-
   scrollContainer: {
     flex: 1,
   },
-
   scrollContent: {
     paddingBottom: 110,   
   },
-
   hero: {
     width: "100%",
     height: 250,
     justifyContent: "flex-end",
   },
-
   heroOverlay: {
     backgroundColor: "rgba(0,0,0,0.35)",
     padding: 20,
   },
-
   heroTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#fff",
   },
-
-  heroSubtitle: {
-    color: "#fff",
-    marginTop: 6,
-    fontSize: 16,
-  },
-
-  ctaButton: {
-    marginTop: 12,
-    backgroundColor: "#fff",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-  },
-
-  ctaText: {
-    color: "#d25a58",
-    fontWeight: "600",
-  },
-
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -187,12 +203,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 24,
   },
-
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
   },
-
   seeAll: {
     fontSize: 14,
     color: "#d25a58",
