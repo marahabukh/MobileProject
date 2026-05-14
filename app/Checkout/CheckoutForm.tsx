@@ -59,6 +59,12 @@ export default function CheckoutPage() {
   const [agree, setAgree] = useState(false);
   const [coupon, setCoupon] = useState("");
 
+  // Visa States
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardHolder, setCardHolder] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [cvv, setCvv] = useState("");
+
   const subtotal = useMemo(() => {
     if (!Array.isArray(cartItems)) return 0;
     return cartItems.reduce(
@@ -81,6 +87,30 @@ export default function CheckoutPage() {
       if (!agree) {
         Alert.alert("تنبيه", "يجب الموافقة على الشروط والأحكام");
         return;
+      }
+
+      if (paymentMethod === "Visa") {
+        if (!cardNumber || !cardHolder || !expiryDate || !cvv) {
+          Alert.alert("تنبيه", "يرجى تعبئة معلومات البطاقة الائتمانية");
+          return;
+        }
+
+        // Validate Expiry Date (MM/YY)
+        const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
+        if (!expiryRegex.test(expiryDate)) {
+          Alert.alert("تنبيه", "يرجى إدخال تاريخ انتهاء صلاحية صحيح (MM/YY)");
+          return;
+        }
+
+        const [month, year] = expiryDate.split('/').map(Number);
+        const now = new Date();
+        const currentYear = now.getFullYear() % 100;
+        const currentMonth = now.getMonth() + 1;
+
+        if (year < currentYear || (year === currentYear && month <= currentMonth)) {
+          Alert.alert("تنبيه", "تاريخ انتهاء الصلاحية يجب أن يكون بعد تاريخ اليوم");
+          return;
+        }
       }
 
       if (!Array.isArray(cartItems) || cartItems.length === 0) {
@@ -266,7 +296,10 @@ export default function CheckoutPage() {
                 <Text style={styles.sectionTitle}>طريقة الدفع</Text>
 
                 <TouchableOpacity
-                  style={styles.paymentOption}
+                  style={[
+                    styles.paymentOption, 
+                    paymentMethod === "الدفع عند الاستلام" && styles.paymentOptionSelected
+                  ]}
                   onPress={() => setPaymentMethod("الدفع عند الاستلام")}
                 >
                   <View style={styles.radioCircle}>
@@ -277,6 +310,91 @@ export default function CheckoutPage() {
 
                   <Text style={styles.paymentText}>الدفع عند الاستلام</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.paymentOption, 
+                    { marginTop: 12 },
+                    paymentMethod === "Visa" && styles.paymentOptionSelected
+                  ]}
+                  onPress={() => setPaymentMethod("Visa")}
+                >
+                  <View style={styles.radioCircle}>
+                    {paymentMethod === "Visa" ? (
+                      <View style={styles.radioInner} />
+                    ) : null}
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="card-outline" size={20} color="#111" style={{ marginRight: 8 }} />
+                    <Text style={styles.paymentText}>بطاقة ائتمانية / Visa</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {paymentMethod === "Visa" && (
+                  <View style={styles.visaForm}>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>اسم صاحب البطاقة</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={cardHolder}
+                        onChangeText={setCardHolder}
+                        placeholder="John Doe"
+                        textAlign="right"
+                      />
+                    </View>
+
+                    <View style={styles.field}>
+                      <Text style={styles.label}>رقم البطاقة</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={cardNumber}
+                        onChangeText={(text) => {
+                          // Basic formatting for card number
+                          const cleaned = text.replace(/\D/g, '');
+                          const formatted = cleaned.replace(/(.{4})/g, '$1 ').trim();
+                          setCardNumber(formatted.substring(0, 19));
+                        }}
+                        placeholder="0000 0000 0000 0000"
+                        keyboardType="numeric"
+                        textAlign="right"
+                      />
+                    </View>
+
+                    <View style={styles.row}>
+                      <View style={styles.halfField}>
+                        <Text style={styles.label}>CVV</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={cvv}
+                          onChangeText={setCvv}
+                          placeholder="123"
+                          keyboardType="numeric"
+                          maxLength={3}
+                          secureTextEntry
+                          textAlign="right"
+                        />
+                      </View>
+                      <View style={styles.halfField}>
+                        <Text style={styles.label}>تاريخ الانتهاء (MM/YY)</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={expiryDate}
+                          onChangeText={(text) => {
+                            let formatted = text.replace(/\D/g, '');
+                            if (formatted.length > 2) {
+                              formatted = formatted.substring(0, 2) + '/' + formatted.substring(2, 4);
+                            }
+                            setExpiryDate(formatted.substring(0, 5));
+                          }}
+                          placeholder="MM/YY"
+                          keyboardType="numeric"
+                          textAlign="right"
+                        />
+                      </View>
+                    </View>
+                  </View>
+                )}
 
                 <Text style={styles.safePaymentText}>
                   مدفوعاتك آمنة ومشفرة في المتجر.
@@ -551,11 +669,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 2,
-    borderColor: mainColor,
+    borderColor: "#eee",
     borderRadius: 14,
     paddingVertical: 18,
     paddingHorizontal: 18,
+    backgroundColor: "#fff",
+  },
+  paymentOptionSelected: {
+    borderColor: mainColor,
     backgroundColor: "#FFF9F9",
+  },
+  visaForm: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
   },
   paymentText: {
     fontSize: 17,

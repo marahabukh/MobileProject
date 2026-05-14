@@ -137,6 +137,12 @@ export default function EditProduct() {
       return setStatusVisible(true);
     }
 
+    if (stock !== "" && Number(stock) < 0) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      setStatusConfig({ type: "error", title: "Invalid Stock", message: "Stock cannot be a negative number." });
+      return setStatusVisible(true);
+    }
+
     setSaving(true);
     triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
     try {
@@ -245,7 +251,7 @@ export default function EditProduct() {
               <TextInput
                 placeholder="0"
                 value={stock}
-                onChangeText={setStock}
+                onChangeText={(val) => setStock(val.replace(/[^0-9]/g, ""))}
                 keyboardType="numeric"
                 style={styles.input}
               />

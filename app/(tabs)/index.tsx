@@ -113,13 +113,13 @@ export default function HomeScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
           renderItem={({ item }) => (
             <View
               style={{
                 width: cardWidth,
-                marginRight: cardMargin,
+                marginRight: 10,
                 marginTop: 15,
-                marginLeft: 16,
               }}
             >
               <CategoryCard

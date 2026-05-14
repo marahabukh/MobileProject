@@ -42,8 +42,15 @@ export default function AddtoCartpage() {
     }, [refetch])
   );
 
-  const increaseQty = (id: string, qty: number) => {
-    updateQuantity(id, qty + 1);
+  const increaseQty = (item: any) => {
+    const currentQty = item.quantity || 1;
+    const availableStock = Number(item.stock || 0);
+    
+    if (currentQty < availableStock) {
+      updateQuantity(item.id, currentQty + 1);
+    } else {
+      Alert.alert("عذراً", "لقد وصلت للحد الأقصى للمتوفر");
+    }
   };
 
   const decreaseQty = (id: string, qty: number) => {
@@ -78,7 +85,7 @@ export default function AddtoCartpage() {
         <View style={[styles.container, isLargeScreen && styles.containerLarge]}>
           <BackButton />
           <Text style={styles.heroTitle}>
-            Your <Text style={styles.heroTitleAccent}>Cart</Text>.
+             <Text style={styles.heroTitleAccent}>Cart</Text>
           </Text>
 
           <View
@@ -137,15 +144,9 @@ export default function AddtoCartpage() {
                             <Text style={styles.qtyValue}>{item.quantity || 1}</Text>
 
                             <TouchableOpacity
-                              style={[styles.qtyCircle, (item.quantity >= (item.stock || 0)) && { opacity: 0.3 }]}
-                              onPress={() => {
-                                if (item.quantity < (item.stock || 0)) {
-                                  increaseQty(item.id, item.quantity);
-                                } else {
-                                  Alert.alert("عذراً", "لقد وصلت للحد الأقصى للمتوفر");
-                                }
-                              }}
-                              disabled={item.quantity >= (item.stock || 0)}
+                              style={[styles.qtyCircle, (item.quantity >= Number(item.stock || 0)) && { opacity: 0.3 }]}
+                              onPress={() => increaseQty(item)}
+                              disabled={item.quantity >= Number(item.stock || 0)}
                             >
                               <Text style={styles.qtyCircleText}>+</Text>
                             </TouchableOpacity>

@@ -7,6 +7,7 @@ type User = {
   email: string | null;
   displayName: string;
   name: string;
+  role?: string;
 } | null;
 
 type AuthContextType = {
@@ -14,6 +15,7 @@ type AuthContextType = {
   isLoading: boolean;
   setUser: (user: User) => void;
   signOut: () => Promise<void>;
+  isAdmin: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,8 +45,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const isAdmin = user?.role === "admin" ;
+  
   return (
-    <AuthContext.Provider value={{ user, isLoading, setUser, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, setUser, signOut, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

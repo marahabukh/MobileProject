@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -8,30 +8,19 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "@/api/firebase";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/context/AuthContext";
 
 const accentRed = "#d25a58";
 const softCard = "#FCFAF7";
 const textMuted = "#8F8A83";
 
 export default function BottomNavigation() {
-  const [user, setUser] = useState<User | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const { user, isLoading, isAdmin } = useAuth();
   const { count } = useCart();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setAuthChecked(true);
-    });
-
-    return unsubscribe;
-  }, []);
-
   const goToProtectedPage = (path: string) => {
-    if (!authChecked) return;
+    if (isLoading) return;
 
     if (user) {
       router.push(path as any);
@@ -70,6 +59,16 @@ export default function BottomNavigation() {
             </View>
           )}
         </TouchableOpacity>
+
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => router.push("/(tabs)/admin/Dashboard" as any)}
+          >
+            <Ionicons name="shield-checkmark-outline" size={24} color={textMuted} />
+            <Text style={styles.navText}>Admin</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.navItem}

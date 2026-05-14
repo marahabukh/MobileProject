@@ -90,8 +90,9 @@ const ProductDetails = () => {
     try {
       if (!product) return;
       setAddingToCart(true);
-      if (product.stock <= 0) {
-        Alert.alert("عذراً", "هذا المنتج غير متوفر حالياً");
+      const availableStock = Number(product.stock || 0);
+      if (availableStock <= 0) {
+        Alert.alert("عذراً", "هذا المنتج غير متوفر حالياً (نفدت الكمية)");
         return;
       }
 
@@ -193,15 +194,16 @@ const ProductDetails = () => {
                 <Text style={styles.quantity}>{quantity}</Text>
 
                 <TouchableOpacity
-                  style={[styles.qtyButton, quantity >= (product?.stock || 0) && { opacity: 0.5 }]}
+                  style={[styles.qtyButton, quantity >= (Number(product?.stock || 0)) && { opacity: 0.5 }]}
                   onPress={() => {
-                    if (quantity < (product?.stock || 0)) {
+                    const availableStock = Number(product?.stock || 0);
+                    if (quantity < availableStock) {
                       setQuantity((prev: number) => prev + 1);
                     } else {
                       Alert.alert("عذراً", "لقد وصلت للحد الأقصى للمتوفر");
                     }
                   }}
-                  disabled={quantity >= (product?.stock || 0)}
+                  disabled={quantity >= (Number(product?.stock || 0))}
                 >
                   <Text style={styles.qtyText}>+</Text>
                 </TouchableOpacity>
@@ -211,13 +213,15 @@ const ProductDetails = () => {
             <TouchableOpacity
               style={[
                 styles.inlineAddToCartButton,
-                addingToCart && { opacity: 0.7 },
+                (addingToCart || Number(product?.stock || 0) <= 0) && styles.disabledButton,
               ]}
               onPress={handleAddToCart}
-              disabled={addingToCart || product.stock <= 0}
+              disabled={addingToCart || Number(product?.stock || 0) <= 0}
             >
               <Text style={styles.buttonText}>
-                {product.stock <= 0 ? "غير متوفر" : (addingToCart ? "جاري الإضافة..." : "إضافة إلى السلة")}
+                {Number(product?.stock || 0) <= 0 
+                  ? "نفدت الكمية" 
+                  : (addingToCart ? "جاري الإضافة..." : "إضافة إلى السلة")}
               </Text>
             </TouchableOpacity>
 
@@ -383,6 +387,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 5,
+  },
+  disabledButton: {
+    backgroundColor: "#A1A1A1",
+    shadowColor: "#A1A1A1",
+    opacity: 0.8,
   },
   sectionTitle: {
     fontSize: 16,
