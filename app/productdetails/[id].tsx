@@ -20,7 +20,7 @@ import BackButton from "@/components/BackButton";
 
 const COLORS = {
   primary: "#d25a58",
-  background: "#F6F6F6",
+  background: "#eee",
   card: "#FFFFFF",
   text: "#1E1E1E",
   subText: "#666666",
