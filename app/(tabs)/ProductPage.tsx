@@ -68,56 +68,59 @@ export default function ProductsScreen() {
 
   const numColumns = width > 1000 ? 4 : width > 700 ? 3 : 2;
 
-  return (
-    <View style={styles.container}>
-      <FlatList
-        data={filteredAndSortedProducts}
-        keyExtractor={(item: any) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.cardWrapper,
-              { width: `${100 / numColumns}%`, paddingHorizontal: 4 },
-            ]}
-          >
-            <ProductCard
-              id={item.id}
-              title={item.title}
-              price={item.price}
-              image={item.image}
-            />
-          </View>
-        )}
-        numColumns={numColumns}
-        key={`flatlist-${numColumns}`}
-        contentContainerStyle={styles.listContent}
-        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
-            colors={["#7a1d4e"]}
-            tintColor="#7a1d4e"
+return (
+  <View style={styles.container}>
+    <BackButton />
+
+    <FlatList
+      data={filteredAndSortedProducts}
+      keyExtractor={(item: any) => item.id.toString()}
+      renderItem={({ item }) => (
+        <View
+          style={[
+            styles.cardWrapper,
+            { width: `${100 / numColumns}%`, paddingHorizontal: 4 },
+          ]}
+        >
+          <ProductCard
+            id={item.id}
+            title={item.title}
+            price={item.price}
+            image={item.image}
           />
-        }
-        ListHeaderComponent={
-          <>
-            <View style={{ marginTop: 50 }}>
-              <BackButton />
-            </View>
-            <Text style={styles.title}>Our Products</Text>
-            <SearchComponent
-              value={search}
-              onChangeText={setSearch}
-              placeholder="search for a product..."
-            />
-            <SortComponent sortBy={sortBy} setSortBy={setSortBy} />
-          </>
-        }
-      />
-    </View>
-  );
+        </View>
+      )}
+      numColumns={numColumns}
+      key={`flatlist-${numColumns}`}
+      contentContainerStyle={styles.listContent}
+      columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          colors={["#7a1d4e"]}
+          tintColor="#7a1d4e"
+        />
+      }
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Text style={styles.title}>Our Products</Text>
+
+          <Text style={styles.subtitle}>Browse and find your favorite items</Text>
+
+          <SearchComponent
+            value={search}
+            onChangeText={setSearch}
+            placeholder="search for a product..."
+          />
+
+          <SortComponent sortBy={sortBy} setSortBy={setSortBy} />
+        </View>
+      }
+    />
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -126,26 +129,43 @@ const styles = StyleSheet.create({
     backgroundColor: "#fcf8fb",
     paddingHorizontal: 16,
   },
+
+  header: {
+    paddingTop: 70,
+    marginBottom: 18,
+  },
+
   title: {
     fontSize: 26,
     fontWeight: "700",
     color: "#7a1d4e",
     marginTop: 24,
-    marginBottom: 18,
+    marginBottom: 6,
     textAlign: "center",
   },
+
+  subtitle: {
+    marginBottom: 18,
+    fontSize: 14,
+    color: "#7a1d4e",
+    textAlign: "center",
+  },
+
   listContent: {
     paddingTop: 12,
     paddingBottom: 16,
   },
+
   columnWrapper: {
     justifyContent: "flex-start",
     gap: 5,
     marginBottom: 5,
   },
+
   cardWrapper: {
     marginBottom: 20,
   },
+
   loading: {
     flex: 1,
     textAlign: "center",
@@ -153,6 +173,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#666",
   },
+
   error: {
     flex: 1,
     textAlign: "center",

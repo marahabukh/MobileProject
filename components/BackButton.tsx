@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function BackButton() {
@@ -17,27 +17,37 @@ export default function BackButton() {
   };
 
   return (
-    <View style={[styles.wrapper, { paddingTop: insets.top + 30 }]}>
-      <TouchableOpacity style={styles.btn} onPress={handlePress}>
-        <Ionicons name="arrow-back" size={22} color="#050404" />
-      </TouchableOpacity>
-    </View>
+    <TouchableOpacity
+      style={[styles.btn, { top: insets.top + 14 }]}
+      onPress={handlePress}
+      activeOpacity={0.75}
+    >
+      <Ionicons name="arrow-back" size={23} color="#fff" />
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    
-    paddingHorizontal: 16,
-    paddingBottom: 4,
-  },
   btn: {
-    width: 40,
-    height: 20,
-    borderRadius: 20,
+    position: "absolute",
+    left: 16,
+    zIndex: 999,
+
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: "#d95b5b",
 
     justifyContent: "center",
     alignItems: "center",
-    alignSelf: "flex-start",
+
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 4,
+
+    borderWidth: 1,
+    borderColor: "#eee",
   },
 });
