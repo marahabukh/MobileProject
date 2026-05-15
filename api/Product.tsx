@@ -16,7 +16,7 @@ export const createProduct = async (product: {
   const payload = {
     title: product.title,
     price: Number(product.price),
-    image: product.images[0], // Primary image for backward compatibility
+    image: product.images[0], 
     images: product.images,
     categoryId: product.categoryId,
     bestSeller: !!product.bestSeller,
@@ -53,7 +53,7 @@ export const updateProduct = async (id: string, product: any) => {
   if (product.price !== undefined) cleanData.price = Number(product.price);
   if (product.images && product.images.length > 0) {
     cleanData.images = product.images;
-    cleanData.image = product.images[0]; // Update primary image too
+    cleanData.image = product.images[0]; 
   } else if (product.image) {
     cleanData.image = product.image;
   }
