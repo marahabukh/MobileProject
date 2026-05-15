@@ -14,13 +14,13 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getProductById, getRandomProducts } from "@/api/Product";
-import { useCart } from "@/hooks/useCart";
+import { addToCart } from "@/api/AddToCart";
 import ProductCard from "@/components/ProductCard";
 import BackButton from "@/components/BackButton";
 
 const COLORS = {
   primary: "#d25a58",
-  background: "#eee",
+  background: "#fcf8fb",
   card: "#FFFFFF",
   text: "#1E1E1E",
   subText: "#666666",
@@ -41,8 +41,6 @@ const ProductDetails = () => {
 
   const [randomProducts, setRandomProducts] = useState<any[]>([]);
   const [loadingRandomProducts, setLoadingRandomProducts] = useState(false);
-
-  const { addItem } = useCart();
 
   useEffect(() => {
     if (id) {
@@ -85,34 +83,47 @@ const ProductDetails = () => {
     }
   };
 
+  const getAvailableStock = () => {
+    return Number(
+      product?.stock ??
+        product?.quantity ??
+        product?.availableQuantity ??
+        product?.countInStock ??
+        999
+    );
+  };
+
   const imagesList = product?.images || [product?.image || product?.imageURL];
 
   const handleAddToCart = async () => {
     try {
-      if (!product) return;
+      if (!product) {
+        Alert.alert("Error", "Product data is not available");
+        return;
+      }
 
       setAddingToCart(true);
 
-      const availableStock = Number(product.stock || 0);
+      const availableStock = getAvailableStock();
 
       if (availableStock <= 0) {
         Alert.alert("Sorry", "This product is currently out of stock");
         return;
       }
 
-      await addItem({
-        productId: String(product.id),
+      await addToCart({
+        productId: String(product.id || product._id),
         title: product.title || product.name || "",
         price: Number(product.price || 0),
-        image: currentImage,
+        image: currentImage || product.image || product.imageURL || "",
         quantity,
-        stock: Number(product.stock || 0),
         size: selectedSize || "",
       });
 
       Alert.alert("Success", "Product added to cart successfully");
       router.push("/Cart/AddToCartPage");
     } catch (error) {
+      console.log("Add to cart error:", error);
       Alert.alert("Error", "Failed to add product to cart");
     } finally {
       setAddingToCart(false);
@@ -131,184 +142,180 @@ const ProductDetails = () => {
     <SafeAreaView style={styles.safeArea}>
       <BackButton />
 
-      <View style={styles.screen}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Product Details</Text>
-          </View>
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Product Details</Text>
+          <Text style={styles.subtitle}>View product information and add it to your cart</Text>
+        </View>
 
-          <View style={[styles.imageCard, { height: height * 0.38 }]}>
-            <Image
-              source={{ uri: currentImage }}
-              style={styles.mainImage}
-              resizeMode="contain"
-            />
-          </View>
+        <View style={[styles.imageCard, { height: height * 0.38 }]}>
+          <Image
+            source={{ uri: currentImage }}
+            style={styles.mainImage}
+            resizeMode="contain"
+          />
+        </View>
 
-          <View style={styles.thumbnailsContainer}>
-            <FlatList
-              horizontal
-              data={imagesList}
-              keyExtractor={(item: any, index: number) => index.toString()}
-              showsHorizontalScrollIndicator={false}
-              renderItem={({ item }: { item: string }) => (
-                <TouchableOpacity
-                  onPress={() => setCurrentImage(item)}
-                  style={[
-                    styles.thumbnailItem,
-                    currentImage === item && styles.activeThumbnail,
-                  ]}
-                >
-                  <Image source={{ uri: item }} style={styles.thumbnailImage} />
-                </TouchableOpacity>
-              )}
-            />
-          </View>
+        <View style={styles.thumbnailsContainer}>
+          <FlatList
+            horizontal
+            data={imagesList}
+            keyExtractor={(item: any, index: number) => index.toString()}
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }: { item: string }) => (
+              <TouchableOpacity
+                onPress={() => setCurrentImage(item)}
+                style={[
+                  styles.thumbnailItem,
+                  currentImage === item && styles.activeThumbnail,
+                ]}
+              >
+                <Image source={{ uri: item }} style={styles.thumbnailImage} />
+              </TouchableOpacity>
+            )}
+          />
+        </View>
 
-          <View style={styles.details}>
-            <Text style={styles.title}>{product.title || product.name}</Text>
+        <View style={styles.details}>
+          <Text style={styles.title}>{product.title || product.name}</Text>
 
-            <View style={styles.priceQuantityRow}>
-              <View>
-                <Text style={styles.price}>₪{product.price}</Text>
+          <View style={styles.priceQuantityRow}>
+            <View>
+              <Text style={styles.price}>₪{product.price}</Text>
 
-                <Text style={styles.stockText}>
-                  Available: {product.stock || 0} pieces
-                </Text>
-              </View>
-
-              <View style={styles.quantityContainerInline}>
-                <TouchableOpacity
-                  style={styles.qtyButton}
-                  onPress={() =>
-                    setQuantity((prev: number) => Math.max(1, prev - 1))
-                  }
-                >
-                  <Text style={styles.qtyText}>-</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.quantity}>{quantity}</Text>
-
-                <TouchableOpacity
-                  style={[
-                    styles.qtyButton,
-                    quantity >= Number(product?.stock || 0) && {
-                      opacity: 0.5,
-                    },
-                  ]}
-                  onPress={() => {
-                    const availableStock = Number(product?.stock || 0);
-
-                    if (quantity < availableStock) {
-                      setQuantity((prev: number) => prev + 1);
-                    } else {
-                      Alert.alert(
-                        "Sorry",
-                        "You have reached the maximum available quantity"
-                      );
-                    }
-                  }}
-                  disabled={quantity >= Number(product?.stock || 0)}
-                >
-                  <Text style={styles.qtyText}>+</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.stockText}>
+                Available: {getAvailableStock()} pieces
+              </Text>
             </View>
 
-            <TouchableOpacity
-              style={[
-                styles.inlineAddToCartButton,
-                (addingToCart || Number(product?.stock || 0) <= 0) &&
-                  styles.disabledButton,
-              ]}
-              onPress={handleAddToCart}
-              disabled={addingToCart || Number(product?.stock || 0) <= 0}
-            >
-              <Text style={styles.buttonText}>
-                {Number(product?.stock || 0) <= 0
-                  ? "Out of Stock"
-                  : addingToCart
-                    ? "Adding..."
-                    : "Add to Cart"}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.quantityContainerInline}>
+              <TouchableOpacity
+                style={styles.qtyButton}
+                onPress={() =>
+                  setQuantity((prev: number) => Math.max(1, prev - 1))
+                }
+              >
+                <Text style={styles.qtyText}>-</Text>
+              </TouchableOpacity>
 
-            {product?.sizes?.length > 0 && (
-              <>
-                <Text style={styles.sectionTitle}>Size</Text>
+              <Text style={styles.quantity}>{quantity}</Text>
 
-                <View style={styles.sizesContainer}>
-                  {product.sizes.map((size: string) => (
-                    <TouchableOpacity
-                      key={size}
-                      style={[
-                        styles.sizeButton,
-                        selectedSize === size && styles.selectedSize,
-                      ]}
-                      onPress={() => setSelectedSize(size)}
-                    >
-                      <Text
-                        style={[
-                          styles.sizeText,
-                          selectedSize === size && styles.selectedSizeText,
-                        ]}
-                      >
-                        {size}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </>
-            )}
-          </View>
+              <TouchableOpacity
+                style={[
+                  styles.qtyButton,
+                  quantity >= getAvailableStock() && styles.disabledQtyButton,
+                ]}
+                onPress={() => {
+                  const availableStock = getAvailableStock();
 
-          <View style={styles.suggestedSection}>
-            <View style={styles.suggestedHeader}>
-              <Text style={styles.suggestedTitle}>
-                Products You Might Like
-              </Text>
-
-              <TouchableOpacity onPress={() => router.push("/ProductPage")}>
-                <Text style={styles.seeAllText}>See All →</Text>
+                  if (quantity < availableStock) {
+                    setQuantity((prev: number) => prev + 1);
+                  } else {
+                    Alert.alert(
+                      "Sorry",
+                      "You have reached the maximum available quantity"
+                    );
+                  }
+                }}
+                disabled={quantity >= getAvailableStock()}
+              >
+                <Text style={styles.qtyText}>+</Text>
               </TouchableOpacity>
             </View>
-
-            {loadingRandomProducts ? (
-              <ActivityIndicator
-                size="small"
-                color={COLORS.primary}
-                style={styles.randomLoading}
-              />
-            ) : (
-              <FlatList
-                data={randomProducts}
-                horizontal
-                keyExtractor={(item: { id: any }) => String(item.id)}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.suggestedList}
-                renderItem={({ item }: { item: any }) => (
-                  <View
-                    style={[
-                      styles.suggestedCardWrapper,
-                      { width: width * 0.48 },
-                    ]}
-                  >
-                    <ProductCard
-                      id={item.id}
-                      title={item.title || item.name}
-                      price={item.price}
-                      image={item.image || item.imageURL}
-                    />
-                  </View>
-                )}
-              />
-            )}
           </View>
-        </ScrollView>
-      </View>
+
+          <TouchableOpacity
+            style={[
+              styles.inlineAddToCartButton,
+              (addingToCart || getAvailableStock() <= 0) &&
+                styles.disabledButton,
+            ]}
+            onPress={handleAddToCart}
+            disabled={addingToCart || getAvailableStock() <= 0}
+          >
+            <Text style={styles.buttonText}>
+              {getAvailableStock() <= 0
+                ? "Out of Stock"
+                : addingToCart
+                  ? "Adding..."
+                  : "Add to Cart"}
+            </Text>
+          </TouchableOpacity>
+
+          {product?.sizes?.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Size</Text>
+
+              <View style={styles.sizesContainer}>
+                {product.sizes.map((size: string) => (
+                  <TouchableOpacity
+                    key={size}
+                    style={[
+                      styles.sizeButton,
+                      selectedSize === size && styles.selectedSize,
+                    ]}
+                    onPress={() => setSelectedSize(size)}
+                  >
+                    <Text
+                      style={[
+                        styles.sizeText,
+                        selectedSize === size && styles.selectedSizeText,
+                      ]}
+                    >
+                      {size}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+
+        <View style={styles.suggestedSection}>
+          <View style={styles.suggestedHeader}>
+            <Text style={styles.suggestedTitle}>Products You Might Like</Text>
+
+            <TouchableOpacity onPress={() => router.push("/ProductPage")}>
+              <Text style={styles.seeAllText}>See All →</Text>
+            </TouchableOpacity>
+          </View>
+
+          {loadingRandomProducts ? (
+            <ActivityIndicator
+              size="small"
+              color={COLORS.primary}
+              style={styles.randomLoading}
+            />
+          ) : (
+            <FlatList
+              data={randomProducts}
+              horizontal
+              keyExtractor={(item: { id: any }) => String(item.id)}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.suggestedList}
+              renderItem={({ item }: { item: any }) => (
+                <View
+                  style={[
+                    styles.suggestedCardWrapper,
+                    { width: width * 0.48 },
+                  ]}
+                >
+                  <ProductCard
+                    id={item.id}
+                    title={item.title || item.name}
+                    price={item.price}
+                    image={item.image || item.imageURL}
+                  />
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -321,8 +328,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  screen: {
+  container: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
 
   scrollContent: {
@@ -331,6 +339,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
+    paddingHorizontal: 16,
     marginBottom: 18,
   },
 
@@ -339,7 +348,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#7a1d4e",
     marginTop: 24,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+
+  subtitle: {
     marginBottom: 18,
+    fontSize: 14,
+    color: "#7a1d4e",
     textAlign: "center",
   },
 
@@ -433,6 +449,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: COLORS.card,
+  },
+
+  disabledQtyButton: {
+    opacity: 0.5,
   },
 
   qtyText: {
