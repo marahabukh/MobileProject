@@ -8,7 +8,7 @@ type Props = {
 export default function SearchComponent({
   value,
   onChangeText,
-  placeholder = "...ابحث عن منتج",
+  placeholder = "Search products...",
 }: Props) {
   return (
     <View style={styles.searchContainer}>
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: "#222",
-    textAlign: "right",
+    textAlign: "left",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,

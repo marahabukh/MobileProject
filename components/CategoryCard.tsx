@@ -27,7 +27,7 @@ export default function CategoryCard({ id, name, image }: any) {
         onPress={() => router.push(`/CategoryById/${id}`)}
         activeOpacity={0.85}
       >
-        <Text style={styles.buttonText}>عرض الفئة</Text>
+        <Text style={styles.buttonText}>View Category</Text>
       </TouchableOpacity>
     </View>
   );
