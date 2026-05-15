@@ -153,11 +153,7 @@ export default function CheckoutPage() {
       });
 
       router.push({
-<<<<<<< Updated upstream
         pathname: "/Checkout/orderSucess",
-=======
-        pathname: "/Checkout/orderSucess", 
->>>>>>> Stashed changes
         params: {
           orderId: generatedOrderId,
           total: String(total.toFixed(2)),

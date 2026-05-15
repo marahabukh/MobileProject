@@ -6,7 +6,7 @@ export default function ProductDetailsLayout() {
     <Stack 
       screenOptions={{ 
         headerShown: false,
-        // animation: 'slide_from_right' // اختياري لتحسين الإحساس
+    
       }}
     />
   );

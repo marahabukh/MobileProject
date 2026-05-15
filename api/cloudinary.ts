@@ -60,7 +60,7 @@ export const uploadImageToCloudinary = async (uri: string) => {
   const settings = normalizeCloudinarySettings(await getCloudinarySettings());
 
   if (!isCloudinaryConfigured(settings)) {
-    throw new Error("يرجى إعداد Cloudinary من صفحة الإعدادات أولًا");
+    throw new Error("Please set up Cloudinary from the settings page first.");
   }
 
   const fileName = `profile_${Date.now()}.jpg`;
@@ -95,7 +95,7 @@ export const uploadImageToCloudinary = async (uri: string) => {
   if (!response.ok || !data?.secure_url) {
     const errorMessage =
       data?.error?.message ||
-      `فشل رفع الصورة إلى Cloudinary (${response.status})`;
+      `Image upload to Cloudinary failed (${response.status})`;
     console.error("Cloudinary upload error:", data, errorMessage);
     throw new Error(errorMessage);
   }

@@ -23,9 +23,10 @@ export default function AddCategory() {
   const [image, setImage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleAddCategory = async () => {
-    if (!name) return Alert.alert("Required", "Category name is missing.");
-
+const handleAddCategory = async () => {
+  if (!name.trim()) {
+    return Alert.alert("Required", "Category name is missing.");
+  }
     setLoading(true);
     try {
       await createCategory({ name, image });

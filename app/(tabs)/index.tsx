@@ -166,7 +166,7 @@ export default function HomeScreen() {
         <View style={{ height: 20 }} />
       </ScrollView>
 
-      <BottomNavigation />
+      <BottomNavigation/>
     </View>
   );
 }

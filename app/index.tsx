@@ -8,13 +8,12 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { useAuth } from "../context/AuthContext";
+import { getSecurely } from "../lib/SecureStorage";
 
 const { width, height } = Dimensions.get("window");
 
 export default function SplashScreen() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
   
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.8);
@@ -29,17 +28,16 @@ export default function SplashScreen() {
       // Small delay to show the beautiful splash screen
       await new Promise(resolve => setTimeout(resolve, 2500));
       
-      if (!isLoading) {
-        if (user) {
-          router.replace("/(tabs)");
-        } else {
-          router.replace("/Auth/login");
-        }
+      const session = await getSecurely("user_session");
+      if (session) {
+        router.replace("/(tabs)");
+      } else {
+        router.replace("/Auth/login");
       }
     };
 
     checkSessionAndNavigate();
-  }, [isLoading, user]);
+  }, []);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -53,7 +51,7 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" transparent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" />
       <LinearGradient
         colors={["#E35D5B", "#C04848"]}
         style={styles.gradient}

@@ -1,6 +1,7 @@
 import { Tabs, Redirect } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { ActivityIndicator, View } from "react-native";
+import React from "react";
 
 export default function TabsLayout() {
   const { user, isLoading } = useAuth();

@@ -39,27 +39,11 @@ export const addToCart = async (payload: AddToCartPayload) => {
 };
 
 export const getCartItems = async () => {
-<<<<<<< Updated upstream
   const querySnapshot = await getDocs(collection(db, "cart"));
   return querySnapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   } as any));
-=======
-  const res = await axiosInstance.get("/cart");
-  if (!res.data.documents) return [];
-
-  return res.data.documents.map((doc: any) => {
-    const parsedFields = Object.fromEntries(
-      Object.entries(doc.fields || {}).map(([key, value]: any) => [key, Object.values(value)[0]])
-    );
-
-    return {
-      ...parsedFields,
-      id: doc.name.split("/").pop(), 
-    };
-  });
->>>>>>> Stashed changes
 };
 
 export const removeFromCart = async (id: string) => {
