@@ -4,9 +4,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 export type SortOption = "default" | "price_asc" | "price_desc";
 
 const SORT_OPTIONS: { label: string; value: SortOption }[] = [
-  { label: "افتراضي", value: "default" },
-  { label: "السعر: من الأقل", value: "price_asc" },
-  { label: "السعر: من الأعلى", value: "price_desc" },
+  { label: "Default", value: "default" },
+  { label: "Price: Low to High", value: "price_asc" },
+  { label: "Price: High to Low", value: "price_desc" },
 ];
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
 export default function SortComponent({ sortBy, setSortBy }: Props) {
   return (
     <View style={styles.sortContainer}>
-      <Text style={styles.sortLabel}>ترتيب:</Text>
+      <Text style={styles.sortLabel}>sort by:</Text>
 
       <View style={styles.sortButtons}>
         {SORT_OPTIONS.map((opt) => (
@@ -46,7 +46,7 @@ export default function SortComponent({ sortBy, setSortBy }: Props) {
 
 const styles = StyleSheet.create({
   sortContainer: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 4,
     marginBottom: 10,
@@ -58,13 +58,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   sortButtons: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     flex: 1,
   },
   sortButton: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
@@ -76,8 +76,8 @@ const styles = StyleSheet.create({
     borderColor: "#d25a58",
   },
   sortButtonText: {
-    fontSize: 13,
-    color: "#555",
+    fontSize: 9,
+    color: "#000000",
   },
   sortButtonTextActive: {
     color: "#fff",

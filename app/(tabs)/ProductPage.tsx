@@ -59,11 +59,11 @@ export default function ProductsScreen() {
   }, [products, search, sortBy]);
 
   if (isLoading && !isRefetching) {
-    return <Text style={styles.loading}>جاري التحميل...</Text>;
+    return <Text style={styles.loading}>Loading...</Text>;
   }
 
   if (error instanceof Error) {
-    return <Text style={styles.error}>خطأ{error.message}</Text>;
+    return <Text style={styles.error}>Error: {error.message}</Text>;
   }
 
   const numColumns = width > 1000 ? 4 : width > 700 ? 3 : 2;
@@ -106,11 +106,11 @@ export default function ProductsScreen() {
             <View style={{ marginTop: 50 }}>
               <BackButton />
             </View>
-            <Text style={styles.title}>منتجاتنا </Text>
+            <Text style={styles.title}>Our Products</Text>
             <SearchComponent
               value={search}
               onChangeText={setSearch}
-              placeholder="...ابحث عن منتج"
+              placeholder="search for a product..."
             />
             <SortComponent sortBy={sortBy} setSortBy={setSortBy} />
           </>

@@ -105,10 +105,10 @@ const ProductDetails = () => {
         stock: Number(product.stock || 0),
         size: selectedSize || "",
       });
-      Alert.alert("تم إضافة المنتج إلى السلة بنجاح");
+      Alert.alert("Product added to cart successfully");
       router.push("/Cart/AddToCartPage");
     } catch (error) {
-      Alert.alert("خطأ", "فشل إضافة المنتج إلى السلة");
+      Alert.alert("Error", "Failed to add product to cart");
     } finally {
       setAddingToCart(false);
     }
@@ -132,7 +132,7 @@ const ProductDetails = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 }}
         >
-          <Text style={styles.headerTitle}>تفاصيل المنتج</Text>
+          <Text style={styles.headerTitle}>Product Details</Text>
           <View style={{ width: 24 }} />
           <View style={[styles.imageCard, { height: height * 0.38 }]}>
             <Image
@@ -146,7 +146,6 @@ const ProductDetails = () => {
             <FlatList
               horizontal
               data={imagesList}
-              inverted
               keyExtractor={(item: any, index: number) => index.toString()}
               showsHorizontalScrollIndicator={false}
               renderItem={({ item }: { item: string }) => (
@@ -171,13 +170,13 @@ const ProductDetails = () => {
                 <Text style={styles.price}>₪{product.price}</Text>
                 <Text
                   style={{
-                    textAlign: "right",
+                    textAlign: "left",
                     color: "#888",
                     fontSize: 12,
                     marginTop: 4,
                   }}
                 >
-                  المتوفر: {product.stock || 0} قطع
+                  Available: {product.stock || 0} pieces
                 </Text>
               </View>
 
@@ -200,7 +199,7 @@ const ProductDetails = () => {
                     if (quantity < availableStock) {
                       setQuantity((prev: number) => prev + 1);
                     } else {
-                      Alert.alert("عذراً", "لقد وصلت للحد الأقصى للمتوفر");
+                      Alert.alert("Sorry", "You have reached the maximum available quantity");
                     }
                   }}
                   disabled={quantity >= (Number(product?.stock || 0))}
@@ -220,14 +219,14 @@ const ProductDetails = () => {
             >
               <Text style={styles.buttonText}>
                 {Number(product?.stock || 0) <= 0 
-                  ? "نفدت الكمية" 
-                  : (addingToCart ? "جاري الإضافة..." : "إضافة إلى السلة")}
+                  ? "Out of Stock" 
+                  : (addingToCart ? "Adding..." : "Add to Cart")}
               </Text>
             </TouchableOpacity>
 
             {product?.sizes?.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>المقاس</Text>
+                <Text style={styles.sectionTitle}>Size</Text>
                 <View style={styles.sizesContainer}>
                   {product.sizes.map((size: string) => (
                     <TouchableOpacity
@@ -255,11 +254,12 @@ const ProductDetails = () => {
 
           <View style={styles.suggestedSection}>
             <View style={styles.suggestedHeader}>
+              <Text style={styles.suggestedTitle}>Products You Might Like</Text>
               <TouchableOpacity onPress={() => router.push("/ProductPage")}>
-                <Text style={styles.seeAllText}>See All</Text>
+                <Text style={styles.seeAllText}>See All →</Text>
               </TouchableOpacity>
 
-              <Text style={styles.suggestedTitle}>منتجات ممكن تعجبك</Text>
+              
             </View>
 
             {loadingRandomProducts ? (
@@ -272,7 +272,6 @@ const ProductDetails = () => {
               <FlatList
                 data={randomProducts}
                 horizontal
-                inverted
                 keyExtractor={(item: { id: any }) => String(item.id)}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.suggestedList}
@@ -311,17 +310,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 15,
-    writingDirection: "rtl",
+    
   },
   headerTitle: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111",
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#7a1d4e",
+    marginTop: 24,
+    marginBottom: 18,
+    textAlign: "center",
   },
   imageCard: {
     marginHorizontal: 20,
@@ -347,7 +349,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.card,
-    marginLeft: 10,
+    marginRight: 10,
     overflow: "hidden",
   },
   activeThumbnail: {
@@ -367,14 +369,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
     color: COLORS.text,
-    textAlign: "right",
+     textAlign: "left",
   },
   price: {
     fontSize: 22,
     fontWeight: "700",
     color: COLORS.primary,
     marginTop: 5,
-    textAlign: "right",
+      textAlign: "left", 
   },
   inlineAddToCartButton: {
     backgroundColor: COLORS.primary,
@@ -399,10 +401,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 10,
     color: COLORS.text,
-    textAlign: "right",
+    textAlign: "left",
   },
   sizesContainer: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     flexWrap: "wrap",
   },
   sizeButton: {
@@ -411,7 +413,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginLeft: 10,
+    marginRight: 10,
     marginBottom: 10,
     backgroundColor: COLORS.card,
   },
@@ -453,13 +455,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   priceQuantityRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 10,
   },
   quantityContainerInline: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
   },
   suggestedSection: {
@@ -467,7 +469,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   suggestedHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
@@ -476,7 +478,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: COLORS.text,
-    textAlign: "right",
+    textAlign: "left",
   },
   seeAllText: {
     fontSize: 14,
@@ -487,6 +489,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   suggestedCardWrapper: {
-    marginLeft: 12,
+    marginRight: 12,
   },
 });

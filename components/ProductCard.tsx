@@ -49,7 +49,7 @@ export default function ProductCard({ product, id, title, price, image }: Props)
         style={styles.button}
         onPress={() => router.push(`/productdetails/${finalProduct.id}`)}
       >
-        <Text style={styles.buttonText}>عرض التفاصيل</Text>
+        <Text style={styles.buttonText}>View details</Text>
       </TouchableOpacity>
     </View>
   );

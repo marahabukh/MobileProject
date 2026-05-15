@@ -79,17 +79,17 @@ export default function ProfileScreen() {
   };
 
   const showImageSuccess = () => {
-    setImageSuccessMessage("تم تحديث صورة الملف الشخصي بنجاح");
+   setImageSuccessMessage("Profile image has been updated successfully");
     setTimeout(() => setImageSuccessMessage(""), 3500);
   };
 
   const showNameSuccess = () => {
-    setNameSuccessMessage("تم تحديث الاسم بنجاح");
+    setNameSuccessMessage("The name has been updated successfully");
     setTimeout(() => setNameSuccessMessage(""), 3500);
   };
 
   const showPasswordSuccess = () => {
-    setPasswordSuccessMessage("تم تغيير كلمة المرور بنجاح");
+    setPasswordSuccessMessage("The password has been changed successfully");
     setTimeout(() => setPasswordSuccessMessage(""), 3500);
   };
 
@@ -108,12 +108,12 @@ export default function ProfileScreen() {
 
   const saveName = async () => {
     if (!auth.currentUser) {
-      Alert.alert("خطأ", "لم يتم تسجيل الدخول");
+      Alert.alert("error", "You are not logged in");
       return;
     }
 
     if (!name.trim()) {
-      Alert.alert("تحذير", "الاسم لا يمكن أن يكون فارغًا");
+      Alert.alert("warning", "Name cannot be empty");
       return;
     }
 
@@ -130,7 +130,7 @@ export default function ProfileScreen() {
       setEditingName(false);
       showNameSuccess();
     } catch (error) {
-      Alert.alert("خطأ", "حدث خطأ أثناء تحديث الاسم");
+      Alert.alert("error", "An error occurred while updating the name");
     } finally {
       setSavingName(false);
     }
@@ -138,7 +138,7 @@ export default function ProfileScreen() {
 
   const pickImage = async () => {
     if (!auth.currentUser) {
-      Alert.alert("خطأ", "لم يتم تسجيل الدخول");
+      Alert.alert("error", "You are not logged in");
       return;
     }
 
@@ -147,7 +147,7 @@ export default function ProfileScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
-        Alert.alert("خطأ", "يتطلب إذن الوصول إلى مكتبة الصور");
+        Alert.alert("error", "Permission to access media library is required");
         return;
       }
 
@@ -164,13 +164,13 @@ export default function ProfileScreen() {
       setImage(imageUri);
       await uploadProfileImage(imageUri);
     } catch (error) {
-      Alert.alert("خطأ", "حدث خطأ أثناء فتح مكتبة الصور");
+      Alert.alert("error", "An error occurred while opening the media library");
     }
   };
 
   const takePhoto = async () => {
     if (!auth.currentUser) {
-      Alert.alert("خطأ", "لم يتم تسجيل الدخول");
+      Alert.alert("error", "You are not logged in");
       return;
     }
 
@@ -178,7 +178,7 @@ export default function ProfileScreen() {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
 
       if (!permission.granted) {
-        Alert.alert("خطأ", "يتطلب إذن الوصول إلى الكاميرا");
+        Alert.alert("error", "Permission to access the camera is required");
         return;
       }
 
@@ -195,7 +195,7 @@ export default function ProfileScreen() {
       setImage(imageUri);
       await uploadProfileImage(imageUri);
     } catch (error) {
-      Alert.alert("خطأ", "حدث خطأ أثناء فتح الكاميرا");
+      Alert.alert("error", "An error occurred while opening the camera");
     }
   };
 
@@ -203,12 +203,12 @@ export default function ProfileScreen() {
     clearSuccessMessages();
 
     Alert.alert(
-      "تعديل صورة الملف الشخصي",
-      "اختر طريقة لإضافة صورة الملف الشخصي",
+      "Edit Profile Image",
+      "Choose a method to add a profile image",
       [
-        { text: "الكاميرا", onPress: takePhoto },
-        { text: "المعرض", onPress: pickImage },
-        { text: "إلغاء", style: "cancel" },
+        { text: "Camera", onPress: takePhoto },
+        { text: "Gallery", onPress: pickImage },
+        { text: "Cancel", style: "cancel" },
       ]
     );
   };
@@ -233,9 +233,9 @@ export default function ProfileScreen() {
       console.error("Profile image upload error:", error);
 
       Alert.alert(
-        "خطأ",
+        "error",
         error?.message ||
-          "حدث خطأ أثناء رفع صورة الملف الشخصي. يرجى التحقق من إعدادات Cloudinary وحاول مرة أخرى."
+          "An error occurred while uploading the profile image. Please check your Cloudinary settings and try again."
       );
     } finally {
       setUploadingImage(false);
@@ -244,22 +244,22 @@ export default function ProfileScreen() {
 
   const changePassword = async () => {
     if (!auth.currentUser) {
-      Alert.alert("خطأ", "لم يتم تسجيل الدخول");
+      Alert.alert("error", "You are not logged in");
       return;
     }
 
     if (!newPassword.trim() || !confirmPassword.trim()) {
-      Alert.alert("تحذير", "يرجى ملء كلا حقول كلمة المرور");
+      Alert.alert("warning", "Please fill in both password fields");
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert("تحذير", "يجب أن تكون كلمة المرور مكونة من 6 أحرف على الأقل");
+      Alert.alert("warning", "Password must be at least 6 characters long");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert("تحذير", "كلمات المرور غير متطابقة");
+      Alert.alert("warning", "Passwords do not match");
       return;
     }
 
@@ -278,13 +278,13 @@ export default function ProfileScreen() {
     } catch (error: any) {
       if (error.code === "auth/requires-recent-login") {
         Alert.alert(
-          "تسجيل دخول حديث مطلوب",
-          "يتطلب Firebase تسجيل دخول حديث قبل تغيير كلمة المرور. يرجى تسجيل الخروج، ثم تسجيل الدخول مرة أخرى، ثم حاول تغيير كلمة المرور."
+          "error",
+          "Firebase requires a recent login before changing the password. Please sign out, then sign in again, then try changing the password."
         );
       } else if (error.code === "auth/weak-password") {
-        Alert.alert("خطأ", "كلمة المرور ضعيفة جداً");
+        Alert.alert("error", "The password is too weak");
       } else {
-        Alert.alert("خطأ", "حدث خطأ أثناء تغيير كلمة المرور");
+        Alert.alert("error", "An error occurred while changing the password");
       }
     } finally {
       setChangingPassword(false);
@@ -299,7 +299,7 @@ export default function ProfileScreen() {
 
       router.replace("/Auth/login" as any);
     } catch (error) {
-      Alert.alert("خطأ", "حدث خطأ أثناء تسجيل الخروج");
+      Alert.alert("error", "An error occurred while logging out");
     } finally {
       setLoggingOut(false);
     }
@@ -309,7 +309,7 @@ export default function ProfileScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#d95b5b" />
-        <Text style={styles.loadingText}>جارٍ تحميل المعلومات...</Text>
+        <Text style={styles.loadingText}>Loading information...</Text>
       </View>
     );
   }
@@ -324,8 +324,8 @@ export default function ProfileScreen() {
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>الملف الشخصي</Text>
-          <Text style={styles.subtitle}>إدارة معلومات حسابك</Text>
+          <Text style={styles.title}>Profile</Text>
+          <Text style={styles.subtitle}>Manage your account information</Text>
         </View>
 
         <View style={styles.profileCard}>
@@ -350,7 +350,7 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-          <Text style={styles.changePhotoText}>تعديل صورة الملف الشخصي</Text>
+          <Text style={styles.changePhotoText}>Edit Profile Photo</Text>
 
           {imageSuccessMessage ? (
             <View style={styles.imageSuccessBox}>
@@ -362,14 +362,14 @@ export default function ProfileScreen() {
           ) : null}
 
           <View style={styles.fieldBox}>
-            <Text style={styles.label}>الاسم</Text>
+            <Text style={styles.label}>Name</Text>
 
             <View style={styles.inputRow}>
               <TextInput
                 value={name}
                 onChangeText={setName}
                 editable={editingName}
-                placeholder="اكتب اسمك"
+                placeholder="Enter your name"
                 placeholderTextColor="#999"
                 style={[styles.input, !editingName && styles.disabledInput]}
               />
@@ -384,7 +384,7 @@ export default function ProfileScreen() {
                   ) : (
                     <>
                       <Ionicons name="checkmark" size={18} color="#fff" />
-                      <Text style={styles.saveNameText}>حفظ</Text>
+                      <Text style={styles.saveNameText}>Save</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -412,24 +412,24 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.fieldBox}>
-            <Text style={styles.label}>البريد الإلكتروني</Text>
+            <Text style={styles.label}>Email</Text>
 
             <View style={styles.displayBox}>
               <Text style={styles.displayText}>
-                {email || "لا يوجد بريد إلكتروني مرتبط"}
+                {email || "No email associated"}
               </Text>
             </View>
           </View>
         </View>
 
         <View style={styles.actionCard}>
-          <Text style={styles.sectionTitle}>تغيير كلمة المرور</Text>
+          <Text style={styles.sectionTitle}>Change Password</Text>
 
           <View style={styles.passwordInputWrapper}>
             <TextInput
               value={newPassword}
               onChangeText={setNewPassword}
-              placeholder="كلمة المرور الجديدة"
+              placeholder="New Password"
               placeholderTextColor="#999"
               secureTextEntry={!showNewPassword}
               style={styles.passwordInputWithIcon}
@@ -451,7 +451,7 @@ export default function ProfileScreen() {
             <TextInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="تأكيد كلمة المرور الجديدة"
+              placeholder="Confirm New Password"
               placeholderTextColor="#999"
               secureTextEntry={!showConfirmPassword}
               style={styles.passwordInputWithIcon}
@@ -478,7 +478,7 @@ export default function ProfileScreen() {
             ) : (
               <>
                 <Ionicons name="lock-closed-outline" size={20} color="#fff" />
-                <Text style={styles.buttonText}>تغيير كلمة المرور</Text>
+                <Text style={styles.buttonText}>Change Password</Text>
               </>
             )}
           </TouchableOpacity>
@@ -499,7 +499,7 @@ export default function ProfileScreen() {
           ) : (
             <>
               <Ionicons name="log-out-outline" size={22} color="#fff" />
-              <Text style={styles.buttonText}>تسجيل الخروج</Text>
+              <Text style={styles.buttonText}>Logout</Text>
             </>
           )}
         </TouchableOpacity>
@@ -539,15 +539,19 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111",
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#7a1d4e",
+    marginTop: 24,
+    marginBottom: 18,
+    textAlign: "center",
   },
 
   subtitle: {
     marginTop: 5,
     fontSize: 14,
-    color: "#777",
+    color: "#7a1d4e",
+     textAlign: "center",
   },
 
   profileCard: {
@@ -615,7 +619,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#222",
     marginBottom: 8,
-    textAlign: "right",
+    textAlign: "left",
   },
 
   inputRow: {
@@ -634,7 +638,7 @@ const styles = StyleSheet.create({
     color: "#111",
     borderWidth: 1,
     borderColor: "#eee",
-    textAlign: "right",
+    textAlign: "left",
   },
 
   disabledInput: {
@@ -683,7 +687,7 @@ const styles = StyleSheet.create({
   displayText: {
     fontSize: 16,
     color: "#666",
-    textAlign: "right",
+    textAlign: "left",
   },
 
   actionCard: {
@@ -703,7 +707,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111",
     marginBottom: 16,
-    textAlign: "right",
+    textAlign: "left",
   },
 
   passwordInputWrapper: {
@@ -724,7 +728,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     fontSize: 16,
     color: "#111",
-    textAlign: "right",
+     textAlign: "left",
   },
 
   eyeButton: {
@@ -741,7 +745,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#eaf6ec",
     borderWidth: 1,
     borderColor: "#c8e6c9",
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     gap: 8,
@@ -755,7 +759,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#eaf6ec",
     borderWidth: 1,
     borderColor: "#c8e6c9",
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     gap: 8,
@@ -767,7 +771,7 @@ const styles = StyleSheet.create({
     color: "#2e7d32",
     fontSize: 14,
     fontWeight: "800",
-    textAlign: "right",
+    textAlign: "left",
   },
 
   changePasswordButton: {
