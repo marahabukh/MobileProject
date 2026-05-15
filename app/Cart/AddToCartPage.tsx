@@ -43,7 +43,7 @@ export default function AddtoCartpage() {
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   // 2. Update Quantity Mutation
@@ -59,8 +59,8 @@ export default function AddtoCartpage() {
         old?.map((item: any) =>
           String(item.id) === String(newVariable.id)
             ? { ...item, quantity: newVariable.quantity }
-            : item
-        )
+            : item,
+        ),
       );
       return { previousCart };
     },
@@ -122,8 +122,8 @@ export default function AddtoCartpage() {
   // Calculations
   const subtotal = Array.isArray(cartItems)
     ? cartItems.reduce((sum: number, item: any) => {
-      return sum + Number(item.price || 0) * Number(item.quantity || 1);
-    }, 0)
+        return sum + Number(item.price || 0) * Number(item.quantity || 1);
+      }, 0)
     : 0;
 
   const discount = subtotal * 0.2;
@@ -144,7 +144,9 @@ export default function AddtoCartpage() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.container, isLargeScreen && styles.containerLarge]}>
+        <View
+          style={[styles.container, isLargeScreen && styles.containerLarge]}
+        >
           <BackButton />
           <Text style={styles.heroTitle}>
             Your <Text style={styles.heroTitleAccent}>Cart</Text>.
@@ -153,16 +155,28 @@ export default function AddtoCartpage() {
           <View
             style={[
               styles.contentWrapper,
-              isLargeScreen ? styles.contentWrapperLarge : styles.contentWrapperMobile,
+              isLargeScreen
+                ? styles.contentWrapperLarge
+                : styles.contentWrapperMobile,
             ]}
           >
             {/* PRODUCT LIST SECTION */}
-            <View style={[styles.cartSection, isLargeScreen && styles.cartSectionLarge]}>
+            <View
+              style={[
+                styles.cartSection,
+                isLargeScreen && styles.cartSectionLarge,
+              ]}
+            >
               {cartItems.length === 0 ? (
                 <View style={styles.emptyBox}>
                   <Ionicons name="cart-outline" size={60} color={textMuted} />
-                  <Text style={styles.emptyText}>سلة المشتريات فارغة حالياً</Text>
-                  <TouchableOpacity style={styles.retryBtn} onPress={() => router.push("/")}>
+                  <Text style={styles.emptyText}>
+                    سلة المشتريات فارغة حالياً
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.retryBtn}
+                    onPress={() => router.push("/")}
+                  >
                     <Text style={styles.retryText}>تسوق الآن</Text>
                   </TouchableOpacity>
                 </View>
@@ -170,7 +184,10 @@ export default function AddtoCartpage() {
                 cartItems.map((item: any) => (
                   <View key={item.id} style={styles.mobileCard}>
                     <View style={styles.mobileCardRow}>
-                      <Image source={{ uri: item.image }} style={styles.mobileImage} />
+                      <Image
+                        source={{ uri: item.image }}
+                        style={styles.mobileImage}
+                      />
 
                       <View style={styles.mobileContent}>
                         <View style={styles.mobileTopLine}>
@@ -179,7 +196,9 @@ export default function AddtoCartpage() {
                               {item.title}
                             </Text>
                             <Text style={styles.mobileMeta}>
-                              {item.size ? `SIZE: ${item.size}` : "PREMIUM SELECTION"}
+                              {item.size
+                                ? `SIZE: ${item.size}`
+                                : "PREMIUM SELECTION"}
                             </Text>
                             <Text style={styles.mobilePinkPrice}>
                               ₪{Number(item.price || 0).toFixed(2)}
@@ -190,7 +209,11 @@ export default function AddtoCartpage() {
                             style={styles.deleteBtnMobile}
                             onPress={() => removeItem(item.id)}
                           >
-                            <Feather name="trash-2" size={18} color={accentRed} />
+                            <Feather
+                              name="trash-2"
+                              size={18}
+                              color={accentRed}
+                            />
                           </TouchableOpacity>
                         </View>
 
@@ -198,16 +221,22 @@ export default function AddtoCartpage() {
                           <View style={styles.qtyCircleWrap}>
                             <TouchableOpacity
                               style={styles.qtyCircle}
-                              onPress={() => decreaseQty(item.id, item.quantity)}
+                              onPress={() =>
+                                decreaseQty(item.id, item.quantity)
+                              }
                             >
                               <Text style={styles.qtyCircleText}>−</Text>
                             </TouchableOpacity>
 
-                            <Text style={styles.qtyValue}>{item.quantity || 1}</Text>
+                            <Text style={styles.qtyValue}>
+                              {item.quantity || 1}
+                            </Text>
 
                             <TouchableOpacity
                               style={styles.qtyCircle}
-                              onPress={() => increaseQty(item.id, item.quantity)}
+                              onPress={() =>
+                                increaseQty(item.id, item.quantity)
+                              }
                             >
                               <Text style={styles.qtyCircleText}>+</Text>
                             </TouchableOpacity>
@@ -221,13 +250,20 @@ export default function AddtoCartpage() {
             </View>
 
             {cartItems.length > 0 && (
-              <View style={[styles.summarySection, isLargeScreen && styles.summarySectionLarge]}>
+              <View
+                style={[
+                  styles.summarySection,
+                  isLargeScreen && styles.summarySectionLarge,
+                ]}
+              >
                 <View style={styles.summaryCard}>
                   <Text style={styles.summaryTitle}>ملخص الطلب</Text>
 
                   <View style={styles.summaryRow}>
                     <Text style={styles.summaryLabel}>المجموع</Text>
-                    <Text style={styles.summaryValue}>₪{subtotal.toFixed(2)}</Text>
+                    <Text style={styles.summaryValue}>
+                      ₪{subtotal.toFixed(2)}
+                    </Text>
                   </View>
 
                   <View style={styles.summaryRow}>
@@ -237,14 +273,18 @@ export default function AddtoCartpage() {
 
                   <View style={styles.summaryRow}>
                     <Text style={styles.summaryLabel}>الخصم (20%)</Text>
-                    <Text style={styles.summaryDiscount}>-₪{discount.toFixed(2)}</Text>
+                    <Text style={styles.summaryDiscount}>
+                      -₪{discount.toFixed(2)}
+                    </Text>
                   </View>
 
                   <View style={styles.divider} />
 
                   <View style={styles.summaryRow}>
                     <Text style={styles.summaryLabelBold}>الإجمالي</Text>
-                    <Text style={styles.summaryValueBold}>₪{total.toFixed(2)}</Text>
+                    <Text style={styles.summaryValueBold}>
+                      ₪{total.toFixed(2)}
+                    </Text>
                   </View>
 
                   <TouchableOpacity
@@ -270,7 +310,13 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 60 },
   container: { paddingHorizontal: 20, paddingTop: 20 },
   containerLarge: { maxWidth: 1100, width: "100%", alignSelf: "center" },
-  heroTitle: { fontSize: 32, fontWeight: "300", color: textDark, marginBottom: 20, textAlign: 'right' },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: "300",
+    color: textDark,
+    marginBottom: 20,
+    textAlign: "right",
+  },
   heroTitleAccent: { color: accentRed, fontWeight: "800" },
   contentWrapper: { gap: 20 },
   contentWrapperMobile: { flexDirection: "column" },
@@ -290,23 +336,95 @@ const styles = StyleSheet.create({
     borderColor: "#f5f5f5",
   },
   mobileCardRow: { flexDirection: "row-reverse", alignItems: "center" },
-  mobileImage: { width: 85, height: 85, borderRadius: 18, backgroundColor: "#f9f9f9", marginLeft: 15 },
+  mobileImage: {
+    width: 85,
+    height: 85,
+    borderRadius: 18,
+    backgroundColor: "#f9f9f9",
+    marginLeft: 15,
+  },
   mobileContent: { flex: 1 },
-  mobileTopLine: { flexDirection: "row-reverse", justifyContent: "space-between" },
-  mobileTitle: { fontSize: 17, fontWeight: "700", color: textDark, textAlign: 'right' },
-  mobileMeta: { fontSize: 11, color: textMuted, textAlign: 'right', marginTop: 2 },
-  mobilePinkPrice: { fontSize: 18, color: accentRed, fontWeight: "700", textAlign: 'right', marginTop: 5 },
-  deleteBtnMobile: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#FFF1F0", justifyContent: "center", alignItems: "center" },
-  mobileBottomRow: { marginTop: 10, alignItems: 'flex-end' },
-  qtyCircleWrap: { flexDirection: "row", alignItems: "center", gap: 15, backgroundColor: "#F7F7F7", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 50 },
-  qtyCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#fff", justifyContent: "center", alignItems: "center", elevation: 1 },
+  mobileTopLine: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+  },
+  mobileTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: textDark,
+    textAlign: "right",
+  },
+  mobileMeta: {
+    fontSize: 11,
+    color: textMuted,
+    textAlign: "right",
+    marginTop: 2,
+  },
+  mobilePinkPrice: {
+    fontSize: 18,
+    color: accentRed,
+    fontWeight: "700",
+    textAlign: "right",
+    marginTop: 5,
+  },
+  deleteBtnMobile: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#FFF1F0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  mobileBottomRow: { marginTop: 10, alignItems: "flex-end" },
+  qtyCircleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    backgroundColor: "#F7F7F7",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 50,
+  },
+  qtyCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 1,
+  },
   qtyCircleText: { fontSize: 18, fontWeight: "700" },
-  qtyValue: { fontSize: 16, fontWeight: "700", minWidth: 20, textAlign: "center" },
+  qtyValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    minWidth: 20,
+    textAlign: "center",
+  },
   summarySection: { width: "100%" },
   summarySectionLarge: { width: 350, marginLeft: 20 },
-  summaryCard: { backgroundColor: softCard, borderRadius: 24, padding: 20, shadowColor: "#000", shadowOpacity: 0.05, elevation: 3, borderWidth: 1, borderColor: "#f5f5f5" },
-  summaryTitle: { fontSize: 19, fontWeight: "800", color: textDark, marginBottom: 15, textAlign: 'right' },
-  summaryRow: { flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 12 },
+  summaryCard: {
+    backgroundColor: softCard,
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#f5f5f5",
+  },
+  summaryTitle: {
+    fontSize: 19,
+    fontWeight: "800",
+    color: textDark,
+    marginBottom: 15,
+    textAlign: "right",
+  },
+  summaryRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
   summaryLabel: { fontSize: 14, color: textMuted },
   summaryValue: { fontSize: 14, fontWeight: "700" },
   summaryDiscount: { fontSize: 14, color: accentRed, fontWeight: "700" },
@@ -314,11 +432,27 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: "#eee", marginVertical: 10 },
   summaryLabelBold: { fontSize: 17, fontWeight: "800" },
   summaryValueBold: { fontSize: 19, fontWeight: "800", color: accentRed },
-  checkoutBtn: { marginTop: 15, backgroundColor: accentRed, borderRadius: 15, paddingVertical: 16, alignItems: "center" },
+  checkoutBtn: {
+    marginTop: 15,
+    backgroundColor: accentRed,
+    borderRadius: 15,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
   checkoutBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
-  emptyBox: { padding: 50, alignItems: 'center' },
-  emptyText: { color: textMuted, fontSize: 16, marginTop: 10, marginBottom: 20 },
-  retryBtn: { backgroundColor: accentRed, paddingHorizontal: 25, paddingVertical: 12, borderRadius: 12 },
+  emptyBox: { padding: 50, alignItems: "center" },
+  emptyText: {
+    color: textMuted,
+    fontSize: 16,
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  retryBtn: {
+    backgroundColor: accentRed,
+    paddingHorizontal: 25,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
   retryText: { color: "#fff", fontWeight: "700" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
