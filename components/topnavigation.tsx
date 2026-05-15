@@ -9,17 +9,13 @@ const accentRed = "#d25a58";
 export default function Top({ title = "Boutique" }: { title?: string }) {
   return (
     <View style={styles.header}>
-      {/* الدائرة الزرقاء اليسرى - زر رجوع */}
       <TouchableOpacity style={styles.circleBtn} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color="#ffffff" />
       </TouchableOpacity>
 
-      {/* عنوان Boutique في الوسط */}
       <Text style={styles.title}>{title}</Text>
 
-      {/* الجانب الأيمن */}
       <View style={styles.rightIcons}>
-        {/* الدائرة الزرقاء اليمنى → شعار السلة (Cart) */}
         <TouchableOpacity 
           style={styles.circleBtn} 
           onPress={() => router.push("/Cart/AddToCartPage")}
@@ -27,7 +23,6 @@ export default function Top({ title = "Boutique" }: { title?: string }) {
           <Ionicons name="cart-outline" size={26} color="#ffffff" />
         </TouchableOpacity>
 
-        {/* زر القائمة (Menu) */}
         <TouchableOpacity style={styles.menuBtn}>
           <Feather name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
@@ -56,7 +51,7 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 20,           // جعلها دائرية أكثر
+    borderRadius: 20,          
   },
 
   title: {

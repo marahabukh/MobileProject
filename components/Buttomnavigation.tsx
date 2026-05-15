@@ -1,3 +1,7 @@
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 import React from "react";
 import {
   View,
@@ -32,25 +36,47 @@ export default function BottomNavigation() {
   return (
     <View style={styles.bottomNavWrap}>
       <View style={styles.bottomNav}>
+<<<<<<< Updated upstream
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/(tabs)" as any)}
+=======
+        
+        
+        <TouchableOpacity 
+          style={styles.navItem} 
+          onPress={() => router.push("/(tabs)")}
+>>>>>>> Stashed changes
         >
           <Ionicons name="home-outline" size={24} color={textMuted} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
 
+<<<<<<< Updated upstream
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => goToProtectedPage("/Cart/AddToCartPage")}
+=======
+    
+        <TouchableOpacity 
+          style={styles.navItem} 
+          onPress={() => router.push("/search")} 
+>>>>>>> Stashed changes
         >
           <Ionicons name="cart-outline" size={24} color={textMuted} />
           <Text style={styles.navText}>Cart</Text>
         </TouchableOpacity>
 
+<<<<<<< Updated upstream
         <TouchableOpacity
           style={styles.cartFab}
           onPress={() => goToProtectedPage("/Cart/AddToCartPage")}
+=======
+        
+        <TouchableOpacity 
+          style={styles.cartFab} 
+          onPress={() => router.push("/Cart/AddToCartPage")}
+>>>>>>> Stashed changes
         >
           <Ionicons name="cart" size={28} color="#fff" />
           {count > 0 && (
@@ -60,6 +86,7 @@ export default function BottomNavigation() {
           )}
         </TouchableOpacity>
 
+<<<<<<< Updated upstream
         {isAdmin && (
           <TouchableOpacity
             style={styles.navItem}
@@ -73,6 +100,12 @@ export default function BottomNavigation() {
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/(tabs)/profile" as any)}
+=======
+        
+        <TouchableOpacity 
+          style={styles.navItem} 
+          onPress={() => router.push("/Auth/login")}
+>>>>>>> Stashed changes
         >
           <Ionicons name="person-outline" size={24} color={textMuted} />
           <Text style={styles.navText}>Profile</Text>
@@ -87,15 +120,24 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
+<<<<<<< Updated upstream
     bottom: Platform.OS === "ios" ? 8 : 12,
+=======
+    bottom: Platform.OS === "ios" ? 8 : 12,   
+>>>>>>> Stashed changes
     paddingHorizontal: 16,
     backgroundColor: "transparent",
     zIndex: 100,
   },
 
   bottomNav: {
+<<<<<<< Updated upstream
     height: 62,
     borderRadius: 999,
+=======
+    height: 62,                  
+    borderRadius: 999,             
+>>>>>>> Stashed changes
     backgroundColor: softCard,
     flexDirection: "row",
     alignItems: "center",
@@ -112,7 +154,11 @@ const styles = StyleSheet.create({
 
   navText: {
     marginTop: 3,
+<<<<<<< Updated upstream
     fontSize: 11,
+=======
+    fontSize: 11,                
+>>>>>>> Stashed changes
     color: textMuted,
     fontWeight: "500",
   },
@@ -120,7 +166,11 @@ const styles = StyleSheet.create({
   cartFab: {
     position: "absolute",
     alignSelf: "center",
+<<<<<<< Updated upstream
     top: -26,
+=======
+    top: -26,                      
+>>>>>>> Stashed changes
     width: 58,
     height: 58,
     borderRadius: 29,

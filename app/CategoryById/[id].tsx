@@ -153,6 +153,7 @@ export default function CategoryProductsScreen() {
             colors={["#d25a58"]}
             tintColor="#d25a58"
           />
+<<<<<<< Updated upstream
         }
         ListHeaderComponent={
           <View style={styles.headerContainer}>
@@ -161,6 +162,32 @@ export default function CategoryProductsScreen() {
             <Text style={styles.subtitle}>
               Browse products in this category
             </Text>
+=======
+        </View>
+      )}
+      contentContainerStyle={styles.container}
+      columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => fetchProducts(true)}
+          colors={["#d25a58"]}
+          tintColor="#d25a58"
+        />
+      }
+      ListHeaderComponent={
+        <>
+<<<<<<< Updated upstream
+
+  <View style={{ marginTop: 50 }}>
+=======
+<View style={{ marginTop: 10, marginBottom: 20 }}>
+>>>>>>> Stashed changes
+  <BackButton />
+</View>
+        <Text style={styles.header}>منتجات {categoryName}</Text>
+>>>>>>> Stashed changes
 
             <SearchComponent
               value={search}

@@ -31,17 +31,27 @@ export default function AddtoCartpage() {
     isLoading,
     subtotal,
     refetch,
+<<<<<<< Updated upstream
     updateQuantity,
     removeItem: removeItemMutation
   } = useCart();
+=======
+  } = useQuery({
+    queryKey: ["cart"],
+    queryFn: getCartItems,
+    staleTime: 0,
+    refetchInterval: 5000, 
+  });
+>>>>>>> Stashed changes
 
-  // Refetch immediately every time this tab comes into focus
+
   useFocusEffect(
     useCallback(() => {
       refetch();
     }, [refetch])
   );
 
+<<<<<<< Updated upstream
   const increaseQty = (item: any) => {
     const currentQty = item.quantity || 1;
     const availableStock = Number(item.stock || 0);
@@ -51,6 +61,70 @@ export default function AddtoCartpage() {
     } else {
       Alert.alert("عذراً", "لقد وصلت للحد الأقصى للمتوفر");
     }
+=======
+ 
+  const mutationUpdate = useMutation({
+    mutationFn: ({ id, quantity }: { id: string | number; quantity: number }) =>
+      updateCartItem(String(id), quantity),
+
+    onMutate: async (newVariable) => {
+      await queryClient.cancelQueries({ queryKey: ["cart"] });
+      const previousCart = queryClient.getQueryData(["cart"]);
+
+      queryClient.setQueryData(["cart"], (old: any) =>
+        old?.map((item: any) =>
+          String(item.id) === String(newVariable.id)
+            ? { ...item, quantity: newVariable.quantity }
+            : item
+        )
+      );
+      return { previousCart };
+    },
+
+    onError: (err, newVariable, context) => {
+      queryClient.setQueryData(["cart"], context?.previousCart);
+      Alert.alert("خطأ", "فشل تحديث الكمية");
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+  });
+
+ 
+  const mutationDelete = useMutation({
+    mutationFn: (id: string | number) => removeFromCart(String(id)),
+
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: ["cart"] });
+      const previousCart = queryClient.getQueryData(["cart"]);
+
+    
+      queryClient.setQueryData(["cart"], (old: any) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((item: any) => String(item.id) !== String(deletedId));
+      });
+
+      return { previousCart };
+    },
+
+    onSuccess: () => {
+      console.log("Item deleted successfully from server");
+    },
+
+    onError: (err, id, context) => {
+      queryClient.setQueryData(["cart"], context?.previousCart);
+      Alert.alert("خطأ", "لم يتمكن النظام من حذف المنتج");
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+  });
+
+  const increaseQty = (id: string | number, qty: any) => {
+    mutationUpdate.mutate({ id, quantity: Number(qty || 0) + 1 });
+>>>>>>> Stashed changes
   };
 
   const decreaseQty = (id: string, qty: number) => {
@@ -63,7 +137,16 @@ export default function AddtoCartpage() {
     removeItemMutation(id);
   };
 
+<<<<<<< Updated upstream
   // Calculations
+=======
+  const subtotal = Array.isArray(cartItems)
+    ? cartItems.reduce((sum: number, item: any) => {
+      return sum + Number(item.price || 0) * Number(item.quantity || 1);
+    }, 0)
+    : 0;
+
+>>>>>>> Stashed changes
   const discount = subtotal * 0.2;
   const total = subtotal - discount;
 
@@ -94,7 +177,7 @@ export default function AddtoCartpage() {
               isLargeScreen ? styles.contentWrapperLarge : styles.contentWrapperMobile,
             ]}
           >
-            {/* PRODUCT LIST SECTION */}
+          
             <View style={[styles.cartSection, isLargeScreen && styles.cartSectionLarge]}>
               {cartItems.length === 0 ? (
                 <View style={styles.emptyBox}>
@@ -203,7 +286,7 @@ export default function AddtoCartpage() {
 }
 
 const styles = StyleSheet.create({
-  // ... your styles remain unchanged
+ 
   screen: { flex: 1, backgroundColor: softBg },
   page: { flex: 1 },
   scrollContent: { paddingBottom: 60 },
