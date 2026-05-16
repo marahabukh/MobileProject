@@ -1,5 +1,4 @@
 import { getCartItems, removeFromCart } from "@/api/AddToCart";
-import BackButton from "@/components/BackButton";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -50,7 +49,6 @@ export default function OrderSuccessPage() {
 
   return (
     <View style={styles.page}>
-      <BackButton />
 
       <View style={[styles.container, isLargeScreen && styles.containerLarge]}>
         <View style={styles.iconWrapper}>
@@ -83,13 +81,7 @@ export default function OrderSuccessPage() {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => router.replace("/Cart/AddToCartPage")}
-        >
-          <Text style={styles.primaryButtonText}>View Cart</Text>
-        </TouchableOpacity>
-
+    
         <TouchableOpacity
           style={styles.secondaryButton}
           onPress={() => router.replace("/")}

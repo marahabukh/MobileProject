@@ -1,14 +1,17 @@
 import { getCartItems } from "@/api/AddToCart";
-import { createOrder } from "@/api/Order";
 import { getCities, City } from "@/api/City";
+import { createOrder } from "@/api/Order";
 import BackButton from "@/components/BackButton";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,23 +19,18 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-  Modal,
-  FlatList,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
+
   const isLargeScreen = width >= 1000;
+
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
-  const {
-    data: cartItems = [],
-    isLoading: loadingCart,
-    error: cartError,
-  } = useQuery({
+  const { data: cartItems = [], isLoading: loadingCart } = useQuery({
     queryKey: ["cart"],
     queryFn: getCartItems,
   });
@@ -56,9 +54,10 @@ export default function CheckoutPage() {
   const [cityModalVisible, setCityModalVisible] = useState(false);
   const [region, setRegion] = useState("");
   const [notes, setNotes] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("الدفع عند الاستلام");
+  const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
   const [agree, setAgree] = useState(false);
   const [coupon, setCoupon] = useState("");
+
   const [cardNumber, setCardNumber] = useState("");
   const [cardHolder, setCardHolder] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -66,10 +65,11 @@ export default function CheckoutPage() {
 
   const subtotal = useMemo(() => {
     if (!Array.isArray(cartItems)) return 0;
+
     return cartItems.reduce(
       (sum: number, item: any) =>
         sum + Number(item.price || 0) * Number(item.quantity || 1),
-      0
+      0,
     );
   }, [cartItems]);
 
@@ -78,49 +78,71 @@ export default function CheckoutPage() {
 
   const handleConfirmOrder = async () => {
     try {
-      if (!firstName || !lastName || !phone1 || !address || !selectedCity) {
-        Alert.alert("تنبيه", "يرجى تعبئة الحقول المطلوبة واختيار المدينة");
-        return;
+      const missingFields: string[] = [];
+
+      if (!firstName.trim()) {
+        missingFields.push("First Name");
       }
 
-      if (!agree) {
-        Alert.alert("تنبيه", "يجب الموافقة على الشروط والأحكام");
-        return;
+      if (!lastName.trim()) {
+        missingFields.push("Last Name");
       }
 
+      if (!phone1.trim()) {
+        missingFields.push("Phone Number");
+      }
+
+      if (!selectedCity) {
+        missingFields.push("City");
+      }
+
+      if (missingFields.length > 0) {
+        Alert.alert(
+          "Missing Required Fields",
+          `Please fill in: ${missingFields.join(", ")}`,
+        );
+        return;
+      }
+     const city = selectedCity as City;
       if (paymentMethod === "Visa") {
         if (!cardNumber || !cardHolder || !expiryDate || !cvv) {
-          Alert.alert("تنبيه", "يرجى تعبئة معلومات البطاقة الائتمانية");
+          Alert.alert("Alert", "Please fill in the credit card information");
           return;
         }
 
-        // Validate Expiry Date (MM/YY)
         const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
+
         if (!expiryRegex.test(expiryDate)) {
-          Alert.alert("تنبيه", "يرجى إدخال تاريخ انتهاء صلاحية صحيح (MM/YY)");
+          Alert.alert("Alert", "Please enter a valid expiry date (MM/YY)");
           return;
         }
 
-        const [month, year] = expiryDate.split('/').map(Number);
+        const [month, year] = expiryDate.split("/").map(Number);
         const now = new Date();
         const currentYear = now.getFullYear() % 100;
         const currentMonth = now.getMonth() + 1;
 
-        if (year < currentYear || (year === currentYear && month <= currentMonth)) {
-          Alert.alert("تنبيه", "تاريخ انتهاء الصلاحية يجب أن يكون بعد تاريخ اليوم");
+        if (
+          year < currentYear ||
+          (year === currentYear && month <= currentMonth)
+        ) {
+          Alert.alert(
+            "Alert",
+            "The expiry date must be after the current date",
+          );
           return;
         }
       }
 
       if (!Array.isArray(cartItems) || cartItems.length === 0) {
-        Alert.alert("تنبيه", "السلة فارغة");
+        Alert.alert("Alert", "The cart is empty");
         return;
       }
 
       setSubmittingOrder(true);
 
       const generatedOrderId = String(
-        Math.floor(100000 + Math.random() * 900000)
+        Math.floor(100000 + Math.random() * 900000),
       );
 
       const orderItems = cartItems.map((item: any) => ({
@@ -132,17 +154,22 @@ export default function CheckoutPage() {
         size: item.size || "",
       }));
 
-     const createdOrder = await createOrder({
+     const orderPayload = {
   orderId: generatedOrderId,
+
   firstName: firstName.trim(),
   lastName: lastName.trim(),
   phone1: phone1.trim(),
-  phone2: phone2.trim(),
-  address: address.trim(),
-  city: selectedCity.name,
-  cityId: selectedCity.id,
-  region: region.trim(),
-  notes: notes.trim(),
+
+  // Optional fields, but still sent with safe default values
+  phone2: phone2.trim() || "Not provided",
+  address: address.trim() || "Not provided",
+  region: region.trim() || "Not provided",
+  notes: notes.trim() || "No notes",
+
+  city: city.name,
+  cityId: String(city.id || ""),
+
   paymentMethod,
   subtotal,
   shippingCost,
@@ -150,9 +177,7 @@ export default function CheckoutPage() {
   items: orderItems,
   status: "pending",
   createdAt: new Date().toISOString(),
-});
-
-console.log("CREATED ORDER:", createdOrder);
+};
 
 await queryClient.invalidateQueries({ queryKey: ["orders"] });
 await queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
@@ -165,6 +190,18 @@ router.push({
     total: String(total.toFixed(2)),
   },
 });
+console.log("ORDER PAYLOAD:", orderPayload);
+
+const createdOrder = await createOrder(orderPayload);
+
+console.log("CREATED ORDER:", createdOrder);
+
+      console.log("CREATED ORDER:", createdOrder);
+
+      await queryClient.invalidateQueries({ queryKey: ["orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["user-orders"] });
+
       router.push({
         pathname: "/Checkout/orderSucess",
         params: {
@@ -172,215 +209,270 @@ router.push({
           total: String(total.toFixed(2)),
         },
       });
-   }
-   catch (error: any) {
-  console.log("Create order error:", error);
-  console.log("Create order response:", error?.response?.data);
+    } catch (error: any) {
+      console.log("Create order error:", error);
+      console.log("Create order response:", error?.response?.data);
 
-  Alert.alert(
-    "خطأ",
-    error?.response?.data?.message || error?.message || "فشل إرسال الطلب"
-  );
-} finally {
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to submit order",
+      );
+    } finally {
       setSubmittingOrder(false);
     }
   };
-
   if (loadingCart) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#d25a58" />
-        <Text style={styles.loadingText}>جاري تحميل بيانات السلة...</Text>
+        <ActivityIndicator size="large" color={mainColor} />
+        <Text style={styles.loadingText}>Loading cart data...</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.root}>
+      <BackButton />
+
       <ScrollView
         style={styles.page}
         contentContainerStyle={styles.pageContent}
         showsVerticalScrollIndicator={false}
       >
-        <BackButton />
-        <View style={[styles.container, isLargeScreen && styles.containerLarge]}>
+        <View
+          style={[styles.container, isLargeScreen && styles.containerLarge]}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Checkout</Text>
+            <Text style={styles.subtitle}>Complete your order information</Text>
+          </View>
+
           <View
             style={[
               styles.layout,
               isLargeScreen ? styles.layoutLarge : styles.layoutMobile,
             ]}
           >
-            <View style={[styles.formColumn, isLargeScreen && styles.formColumnLarge]}>
+            <View
+              style={[
+                styles.formColumn,
+                isLargeScreen && styles.formColumnLarge,
+              ]}
+            >
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>معلومات العميل</Text>
+                <Text style={styles.sectionTitle}>Customer Information</Text>
 
                 <View style={styles.row}>
                   <View style={styles.halfField}>
-                    <Text style={styles.label}>الاسم الأخير *</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={lastName}
-                      onChangeText={setLastName}
-                      textAlign="right"
-                    />
-                  </View>
-
-                  <View style={styles.halfField}>
-                    <Text style={styles.label}>الاسم الأول *</Text>
+                    <Text style={styles.label}>First Name *</Text>
                     <TextInput
                       style={styles.input}
                       value={firstName}
                       onChangeText={setFirstName}
-                      textAlign="right"
+                      textAlign="left"
+                    />
+                  </View>
+
+                  <View style={styles.halfField}>
+                    <Text style={styles.label}>Last Name *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={lastName}
+                      onChangeText={setLastName}
+                      textAlign="left"
                     />
                   </View>
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.label}>رقم الهاتف (059 / 057) *</Text>
+                  <Text style={styles.label}>Phone Number (059 / 057) *</Text>
                   <TextInput
                     style={styles.input}
                     value={phone1}
                     onChangeText={setPhone1}
                     placeholder="0591234567 / 0571234567"
+                    placeholderTextColor="#aaa"
                     keyboardType="phone-pad"
-                    textAlign="right"
+                    textAlign="left"
                   />
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.label}>رقم الهاتف الاحتياطي</Text>
+                  <Text style={styles.label}>Alternate Phone Number</Text>
                   <TextInput
                     style={styles.input}
                     value={phone2}
                     onChangeText={setPhone2}
                     placeholder="0591234567 / 0571234567"
+                    placeholderTextColor="#aaa"
                     keyboardType="phone-pad"
-                    textAlign="right"
+                    textAlign="left"
                   />
                 </View>
               </View>
 
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>معلومات الشحن</Text>
+                <Text style={styles.sectionTitle}>Shipping Information</Text>
 
                 <View style={styles.field}>
-                  <Text style={styles.label}>المدينة *</Text>
-                  <TouchableOpacity 
+                  <Text style={styles.label}>City *</Text>
+                  <TouchableOpacity
                     style={styles.selectBox}
                     onPress={() => setCityModalVisible(true)}
                   >
-                    <Text style={[styles.selectText, selectedCity && { color: "#111" }]}>
-                      {selectedCity ? selectedCity.name : "اختر مدينة"}
+                    <Text
+                      style={[
+                        styles.selectText,
+                        selectedCity && { color: "#111" },
+                      ]}
+                    >
+                      {selectedCity ? selectedCity.name : "Select City"}
                     </Text>
+
                     <Ionicons name="chevron-down" size={18} color="#999" />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.label}>المنطقة / الجهة (اختياري)</Text>
+                  <Text style={styles.label}>Region / Area </Text>
                   <TextInput
                     style={styles.input}
                     value={region}
                     onChangeText={setRegion}
-                    placeholder="اسم المنطقة أو الحي"
-                    textAlign="right"
+                    placeholder="Region name or neighborhood"
+                    placeholderTextColor="#aaa"
+                    textAlign="left"
                   />
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.label}>العنوان التفصيلي *</Text>
+                  <Text style={styles.label}>Detailed Address </Text>
                   <TextInput
                     style={styles.input}
                     value={address}
                     onChangeText={setAddress}
-                    placeholder="الشارع، رقم البناية، الطابق إلخ"
-                    textAlign="right"
+                    placeholder="Street name, building number, floor, etc."
+                    placeholderTextColor="#aaa"
+                    textAlign="left"
                   />
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.label}>ملاحظات الطلب (اختياري)</Text>
+                  <Text style={styles.label}>Order Notes</Text>
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     value={notes}
                     onChangeText={setNotes}
                     multiline
-                    textAlign="right"
+                    placeholderTextColor="#aaa"
+                    textAlign="left"
                   />
                 </View>
               </View>
 
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>طريقة الدفع</Text>
+                <Text style={styles.sectionTitle}>Payment Method</Text>
 
                 <TouchableOpacity
                   style={[
-                    styles.paymentOption, 
-                    paymentMethod === "الدفع عند الاستلام" && styles.paymentOptionSelected
+                    styles.paymentOption,
+                    paymentMethod === "Cash on Delivery" &&
+                      styles.paymentOptionSelected,
                   ]}
-                  onPress={() => setPaymentMethod("الدفع عند الاستلام")}
+                  onPress={() => setPaymentMethod("Cash on Delivery")}
                 >
+                  <Text style={styles.paymentText}>Cash on Delivery</Text>
+
                   <View style={styles.radioCircle}>
-                    {paymentMethod === "الدفع عند الاستلام" ? (
+                    {paymentMethod === "Cash on Delivery" ? (
                       <View style={styles.radioInner} />
                     ) : null}
                   </View>
-
-                  <Text style={styles.paymentText}>الدفع عند الاستلام</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
-                    styles.paymentOption, 
+                    styles.paymentOption,
                     { marginTop: 12 },
-                    paymentMethod === "Visa" && styles.paymentOptionSelected
+                    paymentMethod === "Visa" && styles.paymentOptionSelected,
                   ]}
                   onPress={() => setPaymentMethod("Visa")}
                 >
+                  <View style={styles.paymentTitleRow}>
+                    <Ionicons
+                      name="card-outline"
+                      size={20}
+                      color="#111"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.paymentText}>Credit Card / Visa</Text>
+                  </View>
+
                   <View style={styles.radioCircle}>
                     {paymentMethod === "Visa" ? (
                       <View style={styles.radioInner} />
                     ) : null}
-                  </View>
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="card-outline" size={20} color="#111" style={{ marginRight: 8 }} />
-                    <Text style={styles.paymentText}>بطاقة ائتمانية / Visa</Text>
                   </View>
                 </TouchableOpacity>
 
                 {paymentMethod === "Visa" && (
                   <View style={styles.visaForm}>
                     <View style={styles.field}>
-                      <Text style={styles.label}>اسم صاحب البطاقة</Text>
+                      <Text style={styles.label}>Card Holder Name</Text>
                       <TextInput
                         style={styles.input}
                         value={cardHolder}
                         onChangeText={setCardHolder}
                         placeholder="John Doe"
-                        textAlign="right"
+                        placeholderTextColor="#aaa"
+                        textAlign="left"
                       />
                     </View>
 
                     <View style={styles.field}>
-                      <Text style={styles.label}>رقم البطاقة</Text>
+                      <Text style={styles.label}>Card Number</Text>
                       <TextInput
                         style={styles.input}
                         value={cardNumber}
                         onChangeText={(text) => {
-                          // Basic formatting for card number
-                          const cleaned = text.replace(/\D/g, '');
-                          const formatted = cleaned.replace(/(.{4})/g, '$1 ').trim();
+                          const cleaned = text.replace(/\D/g, "");
+                          const formatted = cleaned
+                            .replace(/(.{4})/g, "$1 ")
+                            .trim();
                           setCardNumber(formatted.substring(0, 19));
                         }}
                         placeholder="0000 0000 0000 0000"
+                        placeholderTextColor="#aaa"
                         keyboardType="numeric"
-                        textAlign="right"
+                        textAlign="left"
                       />
                     </View>
 
                     <View style={styles.row}>
+                      <View style={styles.halfField}>
+                        <Text style={styles.label}>Expiry Date (MM/YY)</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={expiryDate}
+                          onChangeText={(text) => {
+                            let formatted = text.replace(/\D/g, "");
+                            if (formatted.length > 2) {
+                              formatted =
+                                formatted.substring(0, 2) +
+                                "/" +
+                                formatted.substring(2, 4);
+                            }
+                            setExpiryDate(formatted.substring(0, 5));
+                          }}
+                          placeholder="MM/YY"
+                          placeholderTextColor="#aaa"
+                          keyboardType="numeric"
+                          textAlign="left"
+                        />
+                      </View>
+
                       <View style={styles.halfField}>
                         <Text style={styles.label}>CVV</Text>
                         <TextInput
@@ -388,27 +480,11 @@ router.push({
                           value={cvv}
                           onChangeText={setCvv}
                           placeholder="123"
+                          placeholderTextColor="#aaa"
                           keyboardType="numeric"
                           maxLength={3}
                           secureTextEntry
-                          textAlign="right"
-                        />
-                      </View>
-                      <View style={styles.halfField}>
-                        <Text style={styles.label}>تاريخ الانتهاء (MM/YY)</Text>
-                        <TextInput
-                          style={styles.input}
-                          value={expiryDate}
-                          onChangeText={(text) => {
-                            let formatted = text.replace(/\D/g, '');
-                            if (formatted.length > 2) {
-                              formatted = formatted.substring(0, 2) + '/' + formatted.substring(2, 4);
-                            }
-                            setExpiryDate(formatted.substring(0, 5));
-                          }}
-                          placeholder="MM/YY"
-                          keyboardType="numeric"
-                          textAlign="right"
+                          textAlign="left"
                         />
                       </View>
                     </View>
@@ -416,27 +492,32 @@ router.push({
                 )}
 
                 <Text style={styles.safePaymentText}>
-                  مدفوعاتك آمنة ومشفرة في المتجر.
+                  Your payments are safe and encrypted in the store.
                 </Text>
               </View>
 
               <View style={styles.card}>
                 <View style={styles.policyBox}>
-                  <Text style={styles.policyText}>سياسة الدفع والتوصيل</Text>
+                  <Text style={styles.policyText}>
+                    Payment and Delivery Policy
+                  </Text>
                 </View>
 
                 <TouchableOpacity
                   style={styles.checkboxRow}
                   onPress={() => setAgree(!agree)}
                 >
-                  <View style={[styles.checkbox, agree && styles.checkboxActive]}>
+                  <View
+                    style={[styles.checkbox, agree && styles.checkboxActive]}
+                  >
                     {agree ? <Text style={styles.checkboxMark}>✓</Text> : null}
                   </View>
 
                   <Text style={styles.checkboxText}>
-                    أوافق على الشروط والأحكام وسياسة الخصوصية *
+                    I agree to the terms and conditions and privacy policy *
                   </Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={styles.confirmButton}
                   onPress={handleConfirmOrder}
@@ -445,18 +526,25 @@ router.push({
                   {submittingOrder ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.confirmButtonText}>تأكيد الطلب</Text>
+                    <Text style={styles.confirmButtonText}>Confirm Order</Text>
                   )}
                 </TouchableOpacity>
+
                 <Text style={styles.confirmNote}>
-                  بالضغط على تأكيد الطلب، أنت توافق على تلقي الخدمة ورسالة تأكيدية للطلب.
+                  By pressing Confirm Order, you agree to receive the service
+                  and a confirmation message for your order.
                 </Text>
               </View>
             </View>
 
-            <View style={[styles.summaryColumn, isLargeScreen && styles.summaryColumnLarge]}>
+            <View
+              style={[
+                styles.summaryColumn,
+                isLargeScreen && styles.summaryColumnLarge,
+              ]}
+            >
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>ملخص الطلب</Text>
+                <Text style={styles.sectionTitle}>Order Summary</Text>
 
                 {Array.isArray(cartItems) && cartItems.length > 0 ? (
                   <>
@@ -468,88 +556,113 @@ router.push({
                         />
 
                         <View style={styles.summaryProductInfo}>
-                          <Text style={styles.summaryProductName} numberOfLines={1}>
+                          <Text
+                            style={styles.summaryProductName}
+                            numberOfLines={1}
+                          >
                             {item.title}
                           </Text>
+
                           <Text style={styles.summaryProductQty}>
-                            الكمية: {item.quantity} {item.size ? `| المقاس: ${item.size}` : ""}
+                            Quantity: {item.quantity}
+                            {item.size ? ` | Size: ${item.size}` : ""}
                           </Text>
+
                           <Text style={styles.summaryProductPrice}>
-                            ₪{(Number(item.price) * Number(item.quantity)).toFixed(2)}
+                            ₪
+                            {(
+                              Number(item.price) * Number(item.quantity)
+                            ).toFixed(2)}
                           </Text>
                         </View>
                       </View>
                     ))}
                   </>
                 ) : (
-                  <Text style={styles.emptyCartText}>لا توجد منتجات في السلة</Text>
+                  <Text style={styles.emptyCartText}>
+                    No products in the cart
+                  </Text>
                 )}
 
                 <View style={styles.summaryLines}>
                   <View style={styles.summaryLine}>
-                    <Text style={styles.summaryValue}>₪{subtotal.toFixed(2)}</Text>
-                    <Text style={styles.summaryLabel}>المجموع الفرعي</Text>
-                  </View>
-
-                  <View style={styles.summaryLine}>
-                    <Text style={[styles.summaryValue, shippingCost > 0 && { color: "#2E7D32" }]}>
-                      {shippingCost === 0 ? "يحدد حسب المدينة" : `₪${shippingCost.toFixed(2)}`}
+                    <Text style={styles.summaryLabel}>Subtotal</Text>
+                    <Text style={styles.summaryValue}>
+                      ₪{subtotal.toFixed(2)}
                     </Text>
-                    <Text style={styles.summaryLabel}>تكلفة التوصيل</Text>
                   </View>
 
                   <View style={styles.summaryLine}>
+                    <Text style={styles.summaryLabel}>Delivery Cost</Text>
+                    <Text
+                      style={[
+                        styles.summaryValue,
+                        shippingCost > 0 && { color: "#2E7D32" },
+                      ]}
+                    >
+                      {shippingCost === 0
+                        ? "Determined by city"
+                        : `₪${shippingCost.toFixed(2)}`}
+                    </Text>
+                  </View>
+
+                  <View style={styles.summaryLine}>
+                    <Text style={styles.totalLabel}>Total</Text>
                     <Text style={styles.totalValue}>₪{total.toFixed(2)}</Text>
-                    <Text style={styles.totalLabel}>المجموع الكلي</Text>
                   </View>
                 </View>
               </View>
 
               <View style={styles.couponRow}>
-                <TouchableOpacity style={styles.couponButton}>
-                  <Text style={styles.couponButtonText}>تطبيق</Text>
-                </TouchableOpacity>
-
                 <TextInput
                   style={styles.couponInput}
                   value={coupon}
                   onChangeText={setCoupon}
-                  placeholder="رمز الخصم"
-                  textAlign="right"
+                  placeholder="Discount Code"
+                  placeholderTextColor="#aaa"
+                  textAlign="left"
                 />
+
+                <TouchableOpacity style={styles.couponButton}>
+                  <Text style={styles.couponButtonText}>Apply</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* City Selection Modal */}
       <Modal visible={cityModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.cityPickerContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>اختر المدينة</Text>
+              <Text style={styles.modalTitle}>Choose City</Text>
+
               <TouchableOpacity onPress={() => setCityModalVisible(false)}>
                 <Ionicons name="close" size={26} color="#333" />
               </TouchableOpacity>
             </View>
-            
+
             {loadingCities ? (
-              <ActivityIndicator color="#d25a58" style={{ padding: 20 }} />
+              <ActivityIndicator color={mainColor} style={{ padding: 20 }} />
             ) : citiesError ? (
-              <View style={{ padding: 20, alignItems: 'center' }}>
-                <Text style={{ color: 'red', textAlign: 'center' }}>فشل تحميل المدن. يرجى المحاولة لاحقاً.</Text>
+              <View style={styles.modalMessageBox}>
+                <Text style={styles.modalErrorText}>
+                  Failed to load cities. Please try again later.
+                </Text>
               </View>
             ) : cities.length === 0 ? (
-              <View style={{ padding: 20, alignItems: 'center' }}>
-                <Text style={{ color: '#666', textAlign: 'center' }}>لا توجد مدن متاحة حالياً. يرجى التواصل مع الدعم.</Text>
+              <View style={styles.modalMessageBox}>
+                <Text style={styles.modalEmptyText}>
+                  No cities available at the moment. Please contact support.
+                </Text>
               </View>
             ) : (
               <FlatList
                 data={cities}
-                keyExtractor={(item) => item.id!}
+                keyExtractor={(item) => String(item.id)}
                 renderItem={({ item }) => (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.cityItem}
                     onPress={() => {
                       setSelectedCity(item);
@@ -557,7 +670,9 @@ router.push({
                     }}
                   >
                     <Text style={styles.cityNameText}>{item.name}</Text>
-                    <Text style={styles.cityPriceText}>التوصيل: ₪{item.deliveryPrice}</Text>
+                    <Text style={styles.cityPriceText}>
+                      Delivery: ₪{item.deliveryPrice}
+                    </Text>
                   </TouchableOpacity>
                 )}
                 contentContainerStyle={{ paddingBottom: 20 }}
@@ -571,52 +686,87 @@ router.push({
 }
 
 const mainColor = "#d25a58";
-const pageBg = "#F6F6F6";
+const pageBg = "#fcf8fb";
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: pageBg,
+  },
+
   page: {
     flex: 1,
     backgroundColor: pageBg,
   },
+
   pageContent: {
     paddingBottom: 50,
   },
+
   container: {
     width: "100%",
-    paddingHorizontal: 12,
-    paddingTop: 18,
+    paddingHorizontal: 16,
   },
+
   containerLarge: {
     maxWidth: 1350,
     alignSelf: "center",
     paddingHorizontal: 24,
-    paddingTop: 28,
   },
+
+  header: {
+    paddingTop: 70,
+    marginBottom: 18,
+  },
+
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#7a1d4e",
+    marginTop: 24,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+
+  subtitle: {
+    marginBottom: 18,
+    fontSize: 14,
+    color: "#7a1d4e",
+    textAlign: "center",
+  },
+
   layout: {
     gap: 20,
   },
+
   layoutMobile: {
     flexDirection: "column",
   },
+
   layoutLarge: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "flex-start",
   },
+
   formColumn: {
     width: "100%",
     gap: 18,
   },
+
   formColumnLarge: {
     flex: 1,
-    marginLeft: 22,
+    marginRight: 22,
   },
+
   summaryColumn: {
     width: "100%",
     gap: 16,
   },
+
   summaryColumnLarge: {
     width: 350,
   },
+
   card: {
     backgroundColor: "#fff",
     borderRadius: 18,
@@ -628,30 +778,36 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
+
   sectionTitle: {
     fontSize: 20,
     fontWeight: "800",
     color: "#111",
-    textAlign: "right",
+    textAlign: "left",
     marginBottom: 20,
   },
+
   row: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 12,
   },
+
   halfField: {
     flex: 1,
   },
+
   field: {
     marginTop: 16,
   },
+
   label: {
     fontSize: 14,
     color: "#555",
     fontWeight: "700",
-    textAlign: "right",
+    textAlign: "left",
     marginBottom: 8,
   },
+
   input: {
     borderWidth: 1.5,
     borderColor: "#f0f0f0",
@@ -661,30 +817,36 @@ const styles = StyleSheet.create({
     backgroundColor: "#fafafa",
     color: "#111",
     fontSize: 15,
+    textAlign: "left",
   },
+
   textArea: {
     minHeight: 100,
     paddingTop: 12,
+    textAlignVertical: "top",
   },
+
   selectBox: {
     borderWidth: 1.5,
     borderColor: "#f0f0f0",
     borderRadius: 12,
     minHeight: 52,
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     backgroundColor: "#fafafa",
   },
+
   selectText: {
-    textAlign: "right",
+    textAlign: "left",
     color: "#999",
     fontSize: 15,
     fontWeight: "600",
   },
+
   paymentOption: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 2,
@@ -694,22 +856,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     backgroundColor: "#fff",
   },
+
   paymentOptionSelected: {
     borderColor: mainColor,
     backgroundColor: "#FFF9F9",
   },
+
+  paymentTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
   visaForm: {
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: "#eee",
   },
+
   paymentText: {
     fontSize: 17,
     color: "#111",
     fontWeight: "700",
-    textAlign: "right",
+    textAlign: "left",
   },
+
   radioCircle: {
     width: 24,
     height: 24,
@@ -719,18 +890,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
     backgroundColor: mainColor,
   },
+
   safePaymentText: {
     marginTop: 12,
     fontSize: 13,
     color: "#666",
-    textAlign: "right",
+    textAlign: "left",
   },
+
   policyBox: {
     backgroundColor: "#F8F8F8",
     borderRadius: 10,
@@ -738,16 +912,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+
   policyText: {
     color: "#777",
     fontSize: 14,
     fontWeight: "700",
   },
+
   checkboxRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
   },
+
   checkbox: {
     width: 24,
     height: 24,
@@ -756,25 +933,29 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 12,
+    marginRight: 12,
     backgroundColor: "#fff",
   },
+
   checkboxActive: {
     backgroundColor: mainColor,
     borderColor: mainColor,
   },
+
   checkboxMark: {
     color: "#fff",
     fontWeight: "900",
     fontSize: 14,
   },
+
   checkboxText: {
     flex: 1,
-    textAlign: "right",
+    textAlign: "left",
     color: "#444",
     fontSize: 14,
     fontWeight: "600",
   },
+
   confirmButton: {
     backgroundColor: mainColor,
     borderRadius: 14,
@@ -786,11 +967,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+
   confirmButtonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "800",
   },
+
   confirmNote: {
     marginTop: 14,
     fontSize: 12,
@@ -798,84 +981,99 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
   },
+
   summaryProductRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     marginBottom: 18,
     paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#f9f9f9",
   },
+
   summaryImage: {
     width: 65,
     height: 65,
     borderRadius: 12,
     backgroundColor: "#f5f5f5",
-    marginLeft: 15,
+    marginRight: 15,
   },
+
   summaryProductInfo: {
     flex: 1,
-    alignItems: "flex-end",
+    alignItems: "flex-start",
   },
+
   summaryProductName: {
     fontSize: 15,
     fontWeight: "700",
     color: "#111",
-    textAlign: "right",
+    textAlign: "left",
   },
+
   summaryProductQty: {
     marginTop: 4,
     fontSize: 13,
     color: "#777",
-    textAlign: "right",
+    textAlign: "left",
   },
+
   summaryProductPrice: {
     marginTop: 6,
     fontSize: 16,
     fontWeight: "800",
     color: "#111",
-    textAlign: "right",
+    textAlign: "left",
   },
+
   emptyCartText: {
-    textAlign: "right",
+    textAlign: "left",
     color: "#999",
     fontSize: 15,
     marginBottom: 12,
   },
+
   summaryLines: {
     marginTop: 10,
   },
+
   summaryLine: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 16,
   },
+
   summaryLabel: {
     fontSize: 15,
     color: "#666",
     fontWeight: "600",
   },
+
   summaryValue: {
     fontSize: 16,
     color: "#111",
     fontWeight: "700",
   },
+
   totalLabel: {
     fontSize: 20,
     color: "#111",
     fontWeight: "800",
   },
+
   totalValue: {
     fontSize: 22,
     color: mainColor,
     fontWeight: "900",
   },
+
   couponRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
+
   couponInput: {
     flex: 1,
     borderWidth: 1.5,
@@ -885,7 +1083,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: "#fff",
     fontSize: 14,
+    textAlign: "left",
   },
+
   couponButton: {
     backgroundColor: "#333",
     borderRadius: 12,
@@ -894,11 +1094,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   couponButtonText: {
     color: "#fff",
     fontSize: 15,
     fontWeight: "700",
   },
+
   center: {
     flex: 1,
     justifyContent: "center",
@@ -906,17 +1108,20 @@ const styles = StyleSheet.create({
     padding: 30,
     backgroundColor: pageBg,
   },
+
   loadingText: {
     marginTop: 15,
     fontSize: 16,
     color: "#555",
     fontWeight: "700",
   },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "flex-end",
   },
+
   cityPickerContent: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 30,
@@ -925,30 +1130,50 @@ const styles = StyleSheet.create({
     maxHeight: "85%",
     padding: 24,
   },
+
   modalHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 25,
   },
+
   modalTitle: {
     fontSize: 22,
     fontWeight: "900",
     color: "#111",
   },
+
+  modalMessageBox: {
+    padding: 20,
+    alignItems: "center",
+  },
+
+  modalErrorText: {
+    color: "red",
+    textAlign: "center",
+  },
+
+  modalEmptyText: {
+    color: "#666",
+    textAlign: "center",
+  },
+
   cityItem: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 18,
     borderBottomWidth: 1,
     borderBottomColor: "#f5f5f5",
   },
+
   cityNameText: {
     fontSize: 17,
     fontWeight: "700",
     color: "#111",
   },
+
   cityPriceText: {
     fontSize: 14,
     color: "#2E7D32",
