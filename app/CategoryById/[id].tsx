@@ -32,7 +32,7 @@ export default function CategoryProductsScreen() {
   const [sortBy, setSortBy] = useState<SortOption>("default");
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
-  const [categoryName, setCategoryName] = useState("الفئة");
+  const [categoryName, setCategoryName] = useState("Category");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -41,10 +41,12 @@ export default function CategoryProductsScreen() {
 
   const getPrice = (price: number | string) => {
     if (typeof price === "number") return price;
+
     if (typeof price === "string") {
       const cleaned = price.replace(/[^0-9.]/g, "");
       return Number(cleaned) || 0;
     }
+
     return 0;
   };
 
@@ -118,109 +120,143 @@ export default function CategoryProductsScreen() {
   }
 
   return (
-    <FlatList<Product>
-      key={`flatlist-${numColumns}`}
-      data={filteredProducts}
-      keyExtractor={(item) => item.id.toString()}
-      numColumns={numColumns}
-      renderItem={({ item }) => (
-        <View
-          style={[
-            styles.cardWrapper,
-            { width: `${100 / numColumns}%`, paddingHorizontal: 4 },
-          ]}
-        >
-          <ProductCard
-            product={{
-              ...item,
-              price: getPrice(item.price),
-            }}
+    <View style={styles.screen}>
+      <BackButton />
+
+      <FlatList<Product>
+        key={`flatlist-${numColumns}`}
+        data={filteredProducts}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={numColumns}
+        renderItem={({ item }) => (
+          <View
+            style={[
+              styles.cardWrapper,
+              { width: `${100 / numColumns}%`, paddingHorizontal: 4 },
+            ]}
+          >
+            <ProductCard
+              product={{
+                ...item,
+                price: getPrice(item.price),
+              }}
+            />
+          </View>
+        )}
+        contentContainerStyle={styles.container}
+        columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchProducts(true)}
+            colors={["#d25a58"]}
+            tintColor="#d25a58"
           />
-        </View>
-      )}
-      contentContainerStyle={styles.container}
-      columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => fetchProducts(true)}
-          colors={["#d25a58"]}
-          tintColor="#d25a58"
-        />
-      }
-      ListHeaderComponent={
-        <>
+        }
+        ListHeaderComponent={
+          <View style={styles.headerContainer}>
+            <Text style={styles.header}>{categoryName} Products</Text>
 
-  <View style={{ marginTop: 50 }}>
-  <BackButton />
-</View>
-        <Text style={styles.header}>منتجات {categoryName}</Text>
+            <Text style={styles.subtitle}>
+              Browse products in this category
+            </Text>
 
-          <SearchComponent
-            value={search}
-            onChangeText={setSearch}
-            placeholder="...ابحث عن منتج"
-          />
+            <SearchComponent
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search for products..."
+            />
 
-          <SortComponent sortBy={sortBy} setSortBy={setSortBy} />
+            <SortComponent sortBy={sortBy} setSortBy={setSortBy} />
 
-          <Text style={styles.countText}>
-            {filteredProducts.length} منتج
-          </Text>
-        </>
-      }
-      ListEmptyComponent={
-        <View style={styles.center}>
-          <Text style={styles.emptyText}>
-            {filteredProducts.length === 0
-              ? "لا يوجد نتائج أو لا يوجد منتجات في هذه الفئة"
-              : ""}
-          </Text>
-        </View>
-      }
-    />
+            <Text style={styles.countText}>
+              {filteredProducts.length} products
+            </Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No results found or no products in this category
+            </Text>
+          </View>
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: "#fcf8fb",
+  },
+
   container: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
+    paddingTop: 70,
     paddingBottom: 32,
   },
-  row: {
-    flexDirection: "row-reverse",
+
+  headerContainer: {
+    marginBottom: 10,
   },
+
+  row: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    gap: 5,
+    marginBottom: 5,
+  },
+
   cardWrapper: {
     marginBottom: 12,
   },
+
   header: {
     fontSize: 26,
-    fontWeight: "800",
+    fontWeight: "700",
+    color: "#7a1d4e",
+    marginTop: 24,
+    marginBottom: 6,
     textAlign: "center",
-    marginTop: 12,
-    marginBottom: 20,
-    color: "#1a1a1a",
-    letterSpacing: 0.5,
   },
+
+  subtitle: {
+    marginBottom: 18,
+    fontSize: 14,
+    color: "#7a1d4e",
+    textAlign: "center",
+  },
+
   countText: {
     fontSize: 13,
     color: "#999",
-    textAlign: "right",
-    marginHorizontal: 8,
+    textAlign: "left",
+    marginHorizontal: 4,
+    marginTop: 4,
     marginBottom: 10,
   },
+
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 80,
+    paddingHorizontal: 20,
+  },
+
   emptyText: {
     textAlign: "center",
     fontSize: 17,
     color: "#999",
-    marginTop: 80,
     lineHeight: 28,
   },
+
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 100,
+    backgroundColor: "#eee",
   },
 });

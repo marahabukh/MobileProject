@@ -35,6 +35,7 @@ const COLORS = {
   textMain: "#1A1A1A",
   textMuted: "#7C7C7C",
   border: "rgba(0,0,0,0.05)",
+  danger: "#FF4D4D",
 };
 
 export default function EditProduct() {
@@ -156,6 +157,8 @@ export default function EditProduct() {
       });
 
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      await queryClient.invalidateQueries({ queryKey: ["bestSellers"] });
       triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
       setStatusConfig({ type: "success", title: "Success! 🎉", message: "Product updated successfully." });
       setStatusVisible(true);

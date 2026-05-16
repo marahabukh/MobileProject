@@ -54,8 +54,9 @@ export default function EditCategory() {
 
     setLoading(true);
     try {
-      await updateCategory(String(id), { name, image });
+      await updateCategory(id as string, { name, image });
       await queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      await queryClient.invalidateQueries({ queryKey: ["categories"] });
       
       setStatusConfig({
         type: "success",

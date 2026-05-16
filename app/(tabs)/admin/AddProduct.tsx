@@ -47,7 +47,7 @@ export default function AddProduct() {
   const [images, setImages] = useState<string[]>([""]);
   const [stock, setStock] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
-const [categories, setCategories] = useState<{ id: string | number; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [bestSeller, setBestSeller] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchingCats, setFetchingCats] = useState(true);
@@ -97,128 +97,69 @@ const [categories, setCategories] = useState<{ id: string | number; name: string
   };
 
   const handleAddProduct = async () => {
-  const validImages = images.filter((img) => img.trim() !== "");
-  const numericPrice = Number(price);
-  const numericStock = Number(stock || 0);
+    const validImages = images.filter(img => img.trim() !== "");
+    const numericPrice = Number(price);
 
-  if (!title.trim()) {
+    if (!title) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      setStatusConfig({ type: "error", title: "Missing Name", message: "Please enter a product name." });
+      return setStatusVisible(true);
+    }
+
+    if (!price || validImages.length === 0) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      setStatusConfig({ type: "error", title: "Required Fields", message: "Please fill in price and at least one image." });
+      return setStatusVisible(true);
+    }
+
+    if (isNaN(numericPrice) || numericPrice <= 0) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      setStatusConfig({ type: "error", title: "Invalid Price", message: "Price must be a positive number." });
+      return setStatusVisible(true);
+    }
+
+    if (stock !== "" && Number(stock) < 0) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      setStatusConfig({ type: "error", title: "Invalid Stock", message: "Stock cannot be a negative number." });
+      return setStatusVisible(true);
+    }
+
+    setLoading(true);
     triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    setStatusConfig({
-      type: "error",
-      title: "Missing Name",
-      message: "Please enter a product name.",
-    });
-    setStatusVisible(true);
-    return;
-  }
+    try {
+      await createProduct({
+        title,
+        price: numericPrice,
+        images: validImages,
+        categoryId: categoryId || "",
+        bestSeller,
+        stock: Number(stock || 0),
+      });
 
-  if (!price.trim() || validImages.length === 0) {
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    setStatusConfig({
-      type: "error",
-      title: "Required Fields",
-      message: "Please fill in price and at least one image.",
-    });
-    setStatusVisible(true);
-    return;
-  }
+      await queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      await queryClient.invalidateQueries({ queryKey: ["products"] });
+      await queryClient.invalidateQueries({ queryKey: ["bestSellers"] });
 
-  if (isNaN(numericPrice) || numericPrice <= 0) {
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    setStatusConfig({
-      type: "error",
-      title: "Invalid Price",
-      message: "Price must be a positive number.",
-    });
-    setStatusVisible(true);
-    return;
-  }
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
+      setStatusConfig({ type: "success", title: "Success! 🎉", message: "Product listed successfully." });
+      setStatusVisible(true);
+      
+      // Reset form state
+      setTitle("");
+      setPrice("");
+      setImages([""]);
+      setStock("");
+      setBestSeller(false);
 
-  if (!categoryId) {
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    setStatusConfig({
-      type: "error",
-      title: "Missing Category",
-      message: "Please select a category.",
-    });
-    setStatusVisible(true);
-    return;
-  }
+      setTimeout(() => router.back(), 1500);
+    } catch (error: any) {
+      setStatusConfig({ type: "error", title: "Error", message: error.message || "Failed to save." });
+      setStatusVisible(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (stock !== "" && (isNaN(numericStock) || numericStock < 0)) {
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    setStatusConfig({
-      type: "error",
-      title: "Invalid Stock",
-      message: "Stock cannot be a negative number.",
-    });
-    setStatusVisible(true);
-    return;
-  }
-
-  setLoading(true);
-  triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-
-  try {
-    const productPayload = {
-      title: title.trim(),
-      name: title.trim(),
-
-      price: numericPrice,
-
-      image: validImages[0],
-
-      images: validImages,
-
-      categoryId: String(categoryId),
-
-      bestSeller,
-      stock: numericStock,
-    };
-
-    console.log("CREATE PRODUCT PAYLOAD:", productPayload);
-
-    await createProduct(productPayload);
-
-    await queryClient.invalidateQueries({ queryKey: ["products"] });
-    await queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-    await queryClient.invalidateQueries({ queryKey: ["categories"] });
-
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
-
-    setStatusConfig({
-      type: "success",
-      title: "Success!",
-      message: "Product added successfully.",
-    });
-
-    setStatusVisible(true);
-
-    setTitle("");
-    setPrice("");
-    setImages([""]);
-    setStock("");
-    setBestSeller(false);
-
-    setTimeout(() => router.back(), 1500);
-  } catch (error: any) {
-    console.log("CREATE PRODUCT ERROR:", error);
-    console.log("CREATE PRODUCT ERROR RESPONSE:", error?.response?.data);
-
-    setStatusConfig({
-      type: "error",
-      title: "Error",
-      message:
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to add product.",
-    });
-
-    setStatusVisible(true);
-  } finally {
-    setLoading(false);
-  }
-};
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -336,7 +277,7 @@ const [categories, setCategories] = useState<{ id: string | number; name: string
                     <TouchableOpacity
                       onPress={() => {
                         triggerHaptic();
-                        setCategoryId(String(cat.id));
+                        setCategoryId(cat.id);
                       }}
                       style={[
                         styles.chip,

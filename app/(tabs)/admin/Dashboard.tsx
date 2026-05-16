@@ -133,13 +133,30 @@ export default function AdminDashboard() {
     try {
       if (type === "product") {
         await deleteProduct(id);
-        queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+        // Immediate UI update for better UX
+        queryClient.setQueryData(["admin-products"], (old: any) => old?.filter((p: any) => p.id !== id));
+        queryClient.setQueryData(["products"], (old: any) => old?.filter((p: any) => p.id !== id));
+        queryClient.setQueryData(["bestSellers"], (old: any) => old?.filter((p: any) => p.id !== id));
+        
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["admin-products"] }),
+          queryClient.invalidateQueries({ queryKey: ["products"] }),
+          queryClient.invalidateQueries({ queryKey: ["bestSellers"] })
+        ]);
       } else if (type === "category") {
         await deleteCategory(id);
-        queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+        // Immediate UI update
+        queryClient.setQueryData(["admin-categories"], (old: any) => old?.filter((c: any) => c.id !== id));
+        queryClient.setQueryData(["categories"], (old: any) => old?.filter((c: any) => c.id !== id));
+        
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["admin-categories"] }),
+          queryClient.invalidateQueries({ queryKey: ["categories"] })
+        ]);
       } else if (type === "city") {
         await deleteCity(id);
-        queryClient.invalidateQueries({ queryKey: ["cities"] });
+        queryClient.setQueryData(["cities"], (old: any) => old?.filter((c: any) => c.id !== id));
+        await queryClient.invalidateQueries({ queryKey: ["cities"] });
       }
 
       triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);

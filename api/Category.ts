@@ -13,8 +13,8 @@ export const createCategory = async (category: { name: string; image?: string })
 export const getCategories = async () => {
   const querySnapshot = await getDocs(collection(db, "categories"));
   return querySnapshot.docs.map(doc => ({
+    ...doc.data() as object,
     id: doc.id,
-    ...doc.data()
   } as any));
 };
 
