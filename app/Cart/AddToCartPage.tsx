@@ -36,17 +36,15 @@ export default function AddtoCartpage() {
     queryKey: ["cart"],
     queryFn: getCartItems,
     staleTime: 0,
-    refetchInterval: 5000, 
+    refetchInterval: 5000,
   });
 
-  
   useFocusEffect(
     useCallback(() => {
       refetch();
     }, [refetch]),
   );
 
-  
   const mutationUpdate = useMutation({
     mutationFn: ({ id, quantity }: { id: string | number; quantity: number }) =>
       updateCartItem(String(id), quantity),
@@ -75,7 +73,6 @@ export default function AddtoCartpage() {
     },
   });
 
-  
   const mutationDelete = useMutation({
     mutationFn: (id: string | number) => removeFromCart(String(id)),
 
@@ -83,7 +80,6 @@ export default function AddtoCartpage() {
       await queryClient.cancelQueries({ queryKey: ["cart"] });
       const previousCart = queryClient.getQueryData(["cart"]);
 
-   
       queryClient.setQueryData(["cart"], (old: any) => {
         if (!Array.isArray(old)) return old;
         return old.filter((item: any) => String(item.id) !== String(deletedId));
@@ -119,7 +115,6 @@ export default function AddtoCartpage() {
     mutationDelete.mutate(id as string);
   };
 
-  
   const subtotal = Array.isArray(cartItems)
     ? cartItems.reduce((sum: number, item: any) => {
         return sum + Number(item.price || 0) * Number(item.quantity || 1);
@@ -136,9 +131,10 @@ export default function AddtoCartpage() {
       </View>
     );
   }
-
+ 
   return (
     <View style={styles.screen}>
+      <BackButton />
       <ScrollView
         style={styles.page}
         contentContainerStyle={styles.scrollContent}
@@ -147,10 +143,12 @@ export default function AddtoCartpage() {
         <View
           style={[styles.container, isLargeScreen && styles.containerLarge]}
         >
-          <BackButton />
-          <Text style={styles.heroTitle}>
-            Your <Text style={styles.heroTitleAccent}>Cart</Text>.
-          </Text>
+          <View style={styles.header}>
+            <Text style={styles.title}>Your Cart</Text>
+            <Text style={styles.subtitle}>
+              Review your selected items before checkout
+            </Text>
+          </View>
 
           <View
             style={[
@@ -160,7 +158,6 @@ export default function AddtoCartpage() {
                 : styles.contentWrapperMobile,
             ]}
           >
-            {/* PRODUCT LIST SECTION */}
             <View
               style={[
                 styles.cartSection,
@@ -171,7 +168,7 @@ export default function AddtoCartpage() {
                 <View style={styles.emptyBox}>
                   <Ionicons name="cart-outline" size={60} color={textMuted} />
                   <Text style={styles.emptyText}>
-                   Your shopping cart is currently empty
+                    Your shopping cart is currently empty
                   </Text>
                   <TouchableOpacity
                     style={styles.retryBtn}
@@ -304,25 +301,71 @@ export default function AddtoCartpage() {
 }
 
 const styles = StyleSheet.create({
- 
-  screen: { flex: 1, backgroundColor: softBg },
-  page: { flex: 1 },
-  scrollContent: { paddingBottom: 60 },
-  container: { paddingHorizontal: 20, paddingTop: 20 },
-  containerLarge: { maxWidth: 1100, width: "100%", alignSelf: "center" },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: "300",
-    color: textDark,
-    marginBottom: 20,
-    textAlign: "right",
+  screen: {
+    flex: 1,
+    backgroundColor: "#fcf8fb",
   },
-  heroTitleAccent: { color: accentRed, fontWeight: "800" },
-  contentWrapper: { gap: 20 },
-  contentWrapperMobile: { flexDirection: "column" },
-  contentWrapperLarge: { flexDirection: "row", alignItems: "flex-start" },
-  cartSection: { width: "100%" },
-  cartSectionLarge: { flex: 1.6 },
+
+  page: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    paddingBottom: 60,
+  },
+
+  container: {
+    paddingHorizontal: 16,
+  },
+
+  containerLarge: {
+    maxWidth: 1100,
+    width: "100%",
+    alignSelf: "center",
+  },
+
+  header: {
+    paddingTop: 70,
+    marginBottom: 18,
+  },
+
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#7a1d4e",
+    marginTop: 24,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+
+  subtitle: {
+    marginBottom: 18,
+    fontSize: 14,
+    color: "#7a1d4e",
+    textAlign: "center",
+  },
+
+  contentWrapper: {
+    gap: 20,
+  },
+
+  contentWrapperMobile: {
+    flexDirection: "column",
+  },
+
+  contentWrapperLarge: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+
+  cartSection: {
+    width: "100%",
+  },
+
+  cartSectionLarge: {
+    flex: 1.6,
+  },
+
   mobileCard: {
     backgroundColor: softCard,
     borderRadius: 24,
@@ -335,38 +378,51 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#f5f5f5",
   },
-  mobileCardRow: { flexDirection: "row-reverse", alignItems: "center" },
+
+  mobileCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
   mobileImage: {
     width: 85,
     height: 85,
     borderRadius: 18,
     backgroundColor: "#f9f9f9",
-    marginLeft: 15,
+    marginRight: 15,
   },
-  mobileContent: { flex: 1 },
+
+  mobileContent: {
+    flex: 1,
+  },
+
   mobileTopLine: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
   },
+
   mobileTitle: {
     fontSize: 17,
     fontWeight: "700",
     color: textDark,
-    textAlign: "right",
+    textAlign: "left",
   },
+
   mobileMeta: {
     fontSize: 11,
     color: textMuted,
-    textAlign: "right",
+    textAlign: "left",
     marginTop: 2,
   },
+
   mobilePinkPrice: {
     fontSize: 18,
     color: accentRed,
     fontWeight: "700",
-    textAlign: "right",
+    textAlign: "left",
     marginTop: 5,
   },
+
   deleteBtnMobile: {
     width: 34,
     height: 34,
@@ -375,7 +431,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  mobileBottomRow: { marginTop: 10, alignItems: "flex-end" },
+
+  mobileBottomRow: {
+    marginTop: 10,
+    alignItems: "flex-start",
+  },
+
   qtyCircleWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -385,6 +446,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 50,
   },
+
   qtyCircle: {
     width: 28,
     height: 28,
@@ -394,15 +456,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 1,
   },
-  qtyCircleText: { fontSize: 18, fontWeight: "700" },
+
+  qtyCircleText: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
   qtyValue: {
     fontSize: 16,
     fontWeight: "700",
     minWidth: 20,
     textAlign: "center",
   },
-  summarySection: { width: "100%" },
-  summarySectionLarge: { width: 350, marginLeft: 20 },
+
+  summarySection: {
+    width: "100%",
+  },
+
+  summarySectionLarge: {
+    width: 350,
+    marginLeft: 20,
+  },
+
   summaryCard: {
     backgroundColor: softCard,
     borderRadius: 24,
@@ -413,25 +488,60 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#f5f5f5",
   },
+
   summaryTitle: {
     fontSize: 19,
     fontWeight: "800",
     color: textDark,
     marginBottom: 15,
-    textAlign: "right",
+    textAlign: "left",
   },
+
   summaryRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  summaryLabel: { fontSize: 14, color: textMuted },
-  summaryValue: { fontSize: 14, fontWeight: "700" },
-  summaryDiscount: { fontSize: 14, color: accentRed, fontWeight: "700" },
-  shippingFree: { fontSize: 14, color: greenFree, fontWeight: "800" },
-  divider: { height: 1, backgroundColor: "#eee", marginVertical: 10 },
-  summaryLabelBold: { fontSize: 17, fontWeight: "800" },
-  summaryValueBold: { fontSize: 19, fontWeight: "800", color: accentRed },
+
+  summaryLabel: {
+    fontSize: 14,
+    color: textMuted,
+  },
+
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  summaryDiscount: {
+    fontSize: 14,
+    color: accentRed,
+    fontWeight: "700",
+  },
+
+  shippingFree: {
+    fontSize: 14,
+    color: greenFree,
+    fontWeight: "800",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#eee",
+    marginVertical: 10,
+  },
+
+  summaryLabelBold: {
+    fontSize: 17,
+    fontWeight: "800",
+  },
+
+  summaryValueBold: {
+    fontSize: 19,
+    fontWeight: "800",
+    color: accentRed,
+  },
+
   checkoutBtn: {
     marginTop: 15,
     backgroundColor: accentRed,
@@ -439,20 +549,42 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
   },
-  checkoutBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
-  emptyBox: { padding: 50, alignItems: "center" },
+
+  checkoutBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  emptyBox: {
+    padding: 50,
+    alignItems: "center",
+  },
+
   emptyText: {
     color: textMuted,
     fontSize: 16,
     marginTop: 10,
     marginBottom: 20,
+    textAlign: "center",
   },
+
   retryBtn: {
     backgroundColor: accentRed,
     paddingHorizontal: 25,
     paddingVertical: 12,
     borderRadius: 12,
   },
-  retryText: { color: "#fff", fontWeight: "700" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  retryText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fcf8fb",
+  },
 });

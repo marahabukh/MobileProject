@@ -58,8 +58,6 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("الدفع عند الاستلام");
   const [agree, setAgree] = useState(false);
   const [coupon, setCoupon] = useState("");
-
-  // Visa States
   const [cardNumber, setCardNumber] = useState("");
   const [cardHolder, setCardHolder] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
