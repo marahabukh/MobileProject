@@ -36,17 +36,17 @@ export default function AddtoCartpage() {
     queryKey: ["cart"],
     queryFn: getCartItems,
     staleTime: 0,
-    refetchInterval: 5000, // poll every 5 seconds while tab is open
+    refetchInterval: 5000, 
   });
 
-  // Refetch immediately every time this tab comes into focus
+  
   useFocusEffect(
     useCallback(() => {
       refetch();
     }, [refetch]),
   );
 
-  // 2. Update Quantity Mutation
+  
   const mutationUpdate = useMutation({
     mutationFn: ({ id, quantity }: { id: string | number; quantity: number }) =>
       updateCartItem(String(id), quantity),
@@ -67,7 +67,7 @@ export default function AddtoCartpage() {
 
     onError: (err, newVariable, context) => {
       queryClient.setQueryData(["cart"], context?.previousCart);
-      Alert.alert("خطأ", "فشل تحديث الكمية");
+      Alert.alert("Error", "Quantity update failed");
     },
 
     onSettled: () => {
@@ -75,7 +75,7 @@ export default function AddtoCartpage() {
     },
   });
 
-  // 3. DELETE Mutation - FIXED
+  
   const mutationDelete = useMutation({
     mutationFn: (id: string | number) => removeFromCart(String(id)),
 
@@ -83,7 +83,7 @@ export default function AddtoCartpage() {
       await queryClient.cancelQueries({ queryKey: ["cart"] });
       const previousCart = queryClient.getQueryData(["cart"]);
 
-      // Optimistic delete with better safety
+   
       queryClient.setQueryData(["cart"], (old: any) => {
         if (!Array.isArray(old)) return old;
         return old.filter((item: any) => String(item.id) !== String(deletedId));
@@ -98,7 +98,7 @@ export default function AddtoCartpage() {
 
     onError: (err, id, context) => {
       queryClient.setQueryData(["cart"], context?.previousCart);
-      Alert.alert("خطأ", "لم يتمكن النظام من حذف المنتج");
+      Alert.alert("Error", "The system was unable to delete the product.");
     },
 
     onSettled: () => {
@@ -119,7 +119,7 @@ export default function AddtoCartpage() {
     mutationDelete.mutate(id as string);
   };
 
-  // Calculations
+  
   const subtotal = Array.isArray(cartItems)
     ? cartItems.reduce((sum: number, item: any) => {
         return sum + Number(item.price || 0) * Number(item.quantity || 1);
@@ -171,13 +171,13 @@ export default function AddtoCartpage() {
                 <View style={styles.emptyBox}>
                   <Ionicons name="cart-outline" size={60} color={textMuted} />
                   <Text style={styles.emptyText}>
-                    سلة المشتريات فارغة حالياً
+                   Your shopping cart is currently empty
                   </Text>
                   <TouchableOpacity
                     style={styles.retryBtn}
                     onPress={() => router.push("/")}
                   >
-                    <Text style={styles.retryText}>تسوق الآن</Text>
+                    <Text style={styles.retryText}>Start Shopping Now</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -257,22 +257,22 @@ export default function AddtoCartpage() {
                 ]}
               >
                 <View style={styles.summaryCard}>
-                  <Text style={styles.summaryTitle}>ملخص الطلب</Text>
+                  <Text style={styles.summaryTitle}>Order Summary</Text>
 
                   <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>المجموع</Text>
+                    <Text style={styles.summaryLabel}>Subtotal</Text>
                     <Text style={styles.summaryValue}>
                       ₪{subtotal.toFixed(2)}
                     </Text>
                   </View>
 
                   <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>التوصيل</Text>
-                    <Text style={styles.shippingFree}>مجاني</Text>
+                    <Text style={styles.summaryLabel}>Shipping</Text>
+                    <Text style={styles.shippingFree}>Free</Text>
                   </View>
 
                   <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>الخصم (20%)</Text>
+                    <Text style={styles.summaryLabel}>Discount (20%)</Text>
                     <Text style={styles.summaryDiscount}>
                       -₪{discount.toFixed(2)}
                     </Text>
@@ -281,7 +281,7 @@ export default function AddtoCartpage() {
                   <View style={styles.divider} />
 
                   <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabelBold}>الإجمالي</Text>
+                    <Text style={styles.summaryLabelBold}>Total</Text>
                     <Text style={styles.summaryValueBold}>
                       ₪{total.toFixed(2)}
                     </Text>
@@ -291,7 +291,7 @@ export default function AddtoCartpage() {
                     style={styles.checkoutBtn}
                     onPress={() => router.push("/Checkout/CheckoutForm")}
                   >
-                    <Text style={styles.checkoutBtnText}>الدفع الآن</Text>
+                    <Text style={styles.checkoutBtnText}>Checkout Now</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -304,7 +304,7 @@ export default function AddtoCartpage() {
 }
 
 const styles = StyleSheet.create({
-  // ... your styles remain unchanged
+ 
   screen: { flex: 1, backgroundColor: softBg },
   page: { flex: 1 },
   scrollContent: { paddingBottom: 60 },
