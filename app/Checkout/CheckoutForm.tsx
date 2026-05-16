@@ -2,7 +2,7 @@ import { getCartItems } from "@/api/AddToCart";
 import { createOrder } from "@/api/Order";
 import { getCities, City } from "@/api/City";
 import BackButton from "@/components/BackButton";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState, useEffect } from "react";
 import {
@@ -23,6 +23,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 1000;
   const [submittingOrder, setSubmittingOrder] = useState(false);
@@ -131,25 +132,39 @@ export default function CheckoutPage() {
         size: item.size || "",
       }));
 
-      await createOrder({
-        orderId: generatedOrderId,
-        firstName,
-        lastName,
-        phone1,
-        phone2,
-        address,
-        city: selectedCity.name,
-        region,
-        notes,
-        paymentMethod,
-        subtotal,
-        shippingCost,
-        total,
-        items: orderItems,
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      });
+     const createdOrder = await createOrder({
+  orderId: generatedOrderId,
+  firstName: firstName.trim(),
+  lastName: lastName.trim(),
+  phone1: phone1.trim(),
+  phone2: phone2.trim(),
+  address: address.trim(),
+  city: selectedCity.name,
+  cityId: selectedCity.id,
+  region: region.trim(),
+  notes: notes.trim(),
+  paymentMethod,
+  subtotal,
+  shippingCost,
+  total,
+  items: orderItems,
+  status: "pending",
+  createdAt: new Date().toISOString(),
+});
 
+console.log("CREATED ORDER:", createdOrder);
+
+await queryClient.invalidateQueries({ queryKey: ["orders"] });
+await queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+await queryClient.invalidateQueries({ queryKey: ["user-orders"] });
+
+router.push({
+  pathname: "/Checkout/orderSucess",
+  params: {
+    orderId: generatedOrderId,
+    total: String(total.toFixed(2)),
+  },
+});
       router.push({
         pathname: "/Checkout/orderSucess",
         params: {
@@ -157,10 +172,16 @@ export default function CheckoutPage() {
           total: String(total.toFixed(2)),
         },
       });
-    } catch (error) {
-      console.log("Create order error:", error);
-      Alert.alert("خطأ", "فشل إرسال الطلب");
-    } finally {
+   }
+   catch (error: any) {
+  console.log("Create order error:", error);
+  console.log("Create order response:", error?.response?.data);
+
+  Alert.alert(
+    "خطأ",
+    error?.response?.data?.message || error?.message || "فشل إرسال الطلب"
+  );
+} finally {
       setSubmittingOrder(false);
     }
   };
