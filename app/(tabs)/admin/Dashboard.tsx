@@ -8,7 +8,7 @@ import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useMemo } from "react";
 import {
   Alert,
   Dimensions,
@@ -17,21 +17,18 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
-  Modal,
   ActivityIndicator,
 } from "react-native";
-import Animated, {
-  FadeInDown,
-  FadeIn,
-  FadeOut,
-  ScaleInCenter,
-  ScaleOutCenter
-} from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
+
+
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import StatusDialog from "@/components/StatusDialog";
+import StatCard from "@/components/admin/StatCard";
+import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
+import CityModal from "@/components/admin/CityModal";
 
 const { width } = Dimensions.get("window");
 
@@ -57,6 +54,7 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState<ViewType>("overview");
 
+
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; type: "product" | "category" | "city" } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -73,10 +71,15 @@ export default function AdminDashboard() {
   const [deliveryPrice, setDeliveryPrice] = useState("");
   const [savingCity, setSavingCity] = useState(false);
 
+  const { data: products = [], isLoading: loadingProducts } = useQuery({ queryKey: ["admin-products"], queryFn: getProducts });
+  const { data: orders = [], isLoading: loadingOrders } = useQuery({ queryKey: ["admin-orders"], queryFn: getOrders });
+  const { data: categories = [], isLoading: loadingCategories } = useQuery({ queryKey: ["admin-categories"], queryFn: getCategories });
+  const { data: cities = [], isLoading: loadingCities } = useQuery({ queryKey: ["cities"], queryFn: getCities });
+
+  const totalRevenue = useMemo(() => orders.reduce((sum: number, order: any) => sum + (order.total || 0), 0), [orders]);
+
   const triggerHaptic = useCallback((type: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(type);
-    }
+    if (Platform.OS !== "web") Haptics.impactAsync(type);
   }, []);
 
   const handleViewChange = (view: ViewType) => {
@@ -84,99 +87,40 @@ export default function AdminDashboard() {
     setActiveView(view);
   };
 
-  const { data: products = [], refetch: refetchProducts, isLoading: loadingProducts } = useQuery({
-    queryKey: ["admin-products"],
-    queryFn: getProducts,
-  });
-
-  const { data: orders = [], refetch: refetchOrders, isLoading: loadingOrders } = useQuery({
-    queryKey: ["admin-orders"],
-    queryFn: getOrders,
-  });
-
-  const { data: categories = [], refetch: refetchCategories, isLoading: loadingCategories } = useQuery({
-    queryKey: ["admin-categories"],
-    queryFn: getCategories,
-  });
-
-  const { data: cities = [], refetch: refetchCities, isLoading: loadingCities } = useQuery({
-    queryKey: ["cities"],
-    queryFn: getCities,
-  });
-
-  const totalRevenue = orders.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
-
-  const handleDeleteProduct = (id: string) => {
+  const confirmDelete = (id: string, type: "product" | "category" | "city") => {
     triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    setItemToDelete({ id, type: "product" });
-    setDeleteModalVisible(true);
-  };
-
-  const handleDeleteCategory = (id: string) => {
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    setItemToDelete({ id, type: "category" });
-    setDeleteModalVisible(true);
-  };
-
-  const handleDeleteCity = (id: string) => {
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    setItemToDelete({ id, type: "city" });
+    setItemToDelete({ id, type });
     setDeleteModalVisible(true);
   };
 
   const performDelete = async () => {
     if (!itemToDelete) return;
-    
     setIsDeleting(true);
     const { id, type } = itemToDelete;
 
     try {
       if (type === "product") {
         await deleteProduct(id);
-        // Immediate UI update for better UX
-        queryClient.setQueryData(["admin-products"], (old: any) => old?.filter((p: any) => p.id !== id));
-        queryClient.setQueryData(["products"], (old: any) => old?.filter((p: any) => p.id !== id));
-        queryClient.setQueryData(["bestSellers"], (old: any) => old?.filter((p: any) => p.id !== id));
-        
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["admin-products"] }),
-          queryClient.invalidateQueries({ queryKey: ["products"] }),
-          queryClient.invalidateQueries({ queryKey: ["bestSellers"] })
-        ]);
+        queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["bestSellers"] });
       } else if (type === "category") {
         await deleteCategory(id);
-        // Immediate UI update
-        queryClient.setQueryData(["admin-categories"], (old: any) => old?.filter((c: any) => c.id !== id));
-        queryClient.setQueryData(["categories"], (old: any) => old?.filter((c: any) => c.id !== id));
-        
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["admin-categories"] }),
-          queryClient.invalidateQueries({ queryKey: ["categories"] })
-        ]);
+        queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+        queryClient.invalidateQueries({ queryKey: ["categories"] });
       } else if (type === "city") {
         await deleteCity(id);
-        queryClient.setQueryData(["cities"], (old: any) => old?.filter((c: any) => c.id !== id));
-        await queryClient.invalidateQueries({ queryKey: ["cities"] });
+        queryClient.invalidateQueries({ queryKey: ["cities"] });
       }
 
       triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
       setDeleteModalVisible(false);
       setItemToDelete(null);
-      
-      setStatusConfig({
-        type: "success",
-        title: "Success",
-        message: `${type.charAt(0).toUpperCase() + type.slice(1)} has been removed successfully.`
-      });
+      setStatusConfig({ type: "success", title: "Success", message: `${type} deleted successfully.` });
       setStatusVisible(true);
     } catch (e: any) {
-      console.error(`Delete ${type} Error:`, e);
       setDeleteModalVisible(false);
-      setStatusConfig({
-        type: "error",
-        title: "Error",
-        message: e.message || `Failed to delete ${type}`
-      });
+      setStatusConfig({ type: "error", title: "Error", message: e.message || "Failed to delete item." });
       setStatusVisible(true);
     } finally {
       setIsDeleting(false);
@@ -188,25 +132,19 @@ export default function AdminDashboard() {
       triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
       await updateOrderStatus(orderId, newStatus);
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-      if (selectedOrder?.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus });
-      }
+      if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, status: newStatus });
     } catch (error) {
       Alert.alert("Error", "Failed to update status");
     }
   };
 
   const handleSaveCity = async () => {
-    if (!cityName || !deliveryPrice) {
-      return Alert.alert("Required", "Please fill all fields");
-    }
+    if (!cityName || !deliveryPrice) return Alert.alert("Required", "Please fill all fields");
     setSavingCity(true);
     try {
-      if (editingCity) {
-        await updateCity(editingCity.id!, { name: cityName, deliveryPrice: Number(deliveryPrice) });
-      } else {
-        await createCity({ name: cityName, deliveryPrice: Number(deliveryPrice) });
-      }
+      if (editingCity) await updateCity(editingCity.id!, { name: cityName, deliveryPrice: Number(deliveryPrice) });
+      else await createCity({ name: cityName, deliveryPrice: Number(deliveryPrice) });
+      
       queryClient.invalidateQueries({ queryKey: ["cities"] });
       setCityModalVisible(false);
       setEditingCity(null);
@@ -220,353 +158,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const renderOverview = () => (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.scrollContent}
-    >
-      <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.statsGrid}>
-        <LinearGradient
-          colors={[COLORS.secondary, "#333333"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.statCard}
-        >
-          <View style={styles.statIconHeader}>
-            <Ionicons name="cube-outline" size={20} color={COLORS.white} />
-            <Text style={styles.statLabelLight}>Products</Text>
-          </View>
-          <Text style={styles.statValueLight}>{products.length}</Text>
-          <View style={styles.statTrend}>
-            <Ionicons name="trending-up" size={12} color="#4CAF50" />
-            <Text style={styles.trendText}>+12%</Text>
-          </View>
-        </LinearGradient>
-
-        <TouchableOpacity 
-          style={[styles.statCard, { backgroundColor: COLORS.white }]}
-          onPress={() => handleViewChange("orders")}
-        >
-          <View style={styles.statIconHeader}>
-            <Ionicons name="cart-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.statLabelDark}>Orders</Text>
-          </View>
-          <Text style={styles.statValueDark}>{orders.length}</Text>
-          <View style={styles.statTrend}>
-            <Ionicons name="trending-up" size={12} color="#4CAF50" />
-            <Text style={[styles.trendText, { color: "#4CAF50" }]}>+5%</Text>
-          </View>
-        </TouchableOpacity>
-
-        <LinearGradient
-          colors={[COLORS.primary, "#FF8E8B"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.revenueCard}
-        >
-          <View>
-            <Text style={[styles.statLabelLight, { marginBottom: 4 }]}>Total Revenue</Text>
-            <Text style={[styles.revenueValue, { color: COLORS.white }]}>₪{totalRevenue.toFixed(2)}</Text>
-          </View>
-          <View style={styles.revenueIconContainerOverlay}>
-            <Ionicons name="stats-chart" size={32} color="rgba(255,255,255,0.3)" />
-          </View>
-        </LinearGradient>
-
-        <LinearGradient
-          colors={["#4A90E2", "#7EB6FF"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.revenueCard, { marginTop: 16 }]}
-        >
-          <View>
-            <Text style={[styles.statLabelLight, { marginBottom: 4 }]}>Total Categories</Text>
-            <Text style={[styles.revenueValue, { color: COLORS.white }]}>{categories.length}</Text>
-          </View>
-          <View style={styles.revenueIconContainerOverlay}>
-            <Ionicons name="layers" size={32} color="rgba(255,255,255,0.3)" />
-          </View>
-        </LinearGradient>
-      </Animated.View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-      </View>
-
-      <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.actionRow}>
-        <TouchableOpacity
-          onPress={() => {
-            triggerHaptic();
-            router.push("/admin/Category/AddCategory");
-          }}
-          style={styles.actionButton}
-        >
-          <LinearGradient
-            colors={["#FFFFFF", "#F0F0F0"]}
-            style={styles.actionButtonInner}
-          >
-            <View style={[styles.actionIconContainer, { backgroundColor: "#FFF0F0" }]}>
-              <Ionicons name="grid-outline" size={24} color={COLORS.primary} />
-            </View>
-            <Text style={styles.actionButtonTextDark}>New Category</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            triggerHaptic();
-            router.push("/admin/AddProduct");
-          }}
-          style={styles.actionButton}
-        >
-          <LinearGradient
-            colors={["#FFFFFF", "#F0F0F0"]}
-            style={styles.actionButtonInner}
-          >
-            <View style={[styles.actionIconContainer, { backgroundColor: "#F0F5FF" }]}>
-              <Ionicons name="add-circle-outline" size={24} color={COLORS.accent} />
-            </View>
-            <Text style={styles.actionButtonTextDark}>Add Product</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </Animated.View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Recent Orders</Text>
-        <TouchableOpacity onPress={() => setActiveView("orders")}>
-          <Text style={styles.seeAllText}>See All</Text>
-        </TouchableOpacity>
-      </View>
-      
-      {orders.slice(0, 5).map((order: any, idx: number) => (
-        <TouchableOpacity 
-          key={order.id} 
-          style={styles.miniOrderCard}
-          onPress={() => {
-            setSelectedOrder(order);
-            setOrderModalVisible(true);
-          }}
-        >
-          <View style={styles.miniOrderLeft}>
-            <Text style={styles.miniOrderId}>#{order.orderId || order.id.slice(0,6)}</Text>
-            <Text style={styles.miniOrderName}>{order.customerName}</Text>
-          </View>
-          <View style={styles.miniOrderRight}>
-            <Text style={styles.miniOrderTotal}>₪{order.total}</Text>
-            <View style={[styles.miniStatusBadge, { backgroundColor: getStatusColor(order.status) + '15' }]}>
-              <Text style={[styles.miniStatusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
-
-  const renderCategories = () => (
-    <Animated.View entering={FadeInDown} style={styles.listView}>
-      <View style={styles.listHeader}>
-        <Text style={styles.viewTitle}>Category Management</Text>
-        <TouchableOpacity
-          style={styles.addIconSmall}
-          onPress={() => router.push("/admin/Category/AddCategory")}
-        >
-          <Ionicons name="add" size={24} color={COLORS.white} />
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        data={categories}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(index * 100)}>
-            <View style={styles.listItem}>
-              <View style={styles.listItemLeft}>
-                <Image
-                  source={{ uri: item.image || "https://via.placeholder.com/150" }}
-                  style={styles.listImage}
-                  contentFit="cover"
-                  transition={500}
-                />
-                <View>
-                  <Text style={styles.listItemTitle}>{item.name}</Text>
-                  <Text style={styles.listItemSubtitle}>
-                    {products.filter((p: any) => p.categoryId === item.id).length} Products
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.listItemActions}>
-                <TouchableOpacity
-                  onPress={() => router.push(`/(tabs)/admin/Category/EditCategory/${item.id}`)}
-                  style={styles.iconButtonSmall}
-                >
-                  <Ionicons name="pencil-outline" size={18} color={COLORS.textMuted} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleDeleteCategory(item.id)}
-                  style={[styles.iconButtonSmall, { backgroundColor: "#FFF0F0" }]}
-                >
-                  <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Animated.View>
-        )}
-      />
-    </Animated.View>
-  );
-
-  const renderProducts = () => (
-    <Animated.View entering={FadeInDown} style={styles.listView}>
-      <View style={styles.listHeader}>
-        <Text style={styles.viewTitle}>Product Management</Text>
-        <TouchableOpacity
-          style={styles.addIconSmall}
-          onPress={() => router.push("/admin/AddProduct")}
-        >
-          <Ionicons name="add" size={24} color={COLORS.white} />
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(index * 50)}>
-            <View style={styles.productListItem}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => router.push(`/(tabs)/admin/EditProduct/${item.id}`)}
-                style={styles.productInfoRow}
-              >
-                <Image
-                  source={{ uri: item.image || "https://via.placeholder.com/150" }}
-                  style={styles.productImage}
-                  contentFit="cover"
-                  transition={500}
-                />
-                <View style={styles.productInfo}>
-                  <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
-                  <View style={styles.productSubInfo}>
-                    <Text style={styles.productPrice}>₪{item.price}</Text>
-                    <View style={[styles.stockBadge, { backgroundColor: (item.stock || 0) < 5 ? "#FFF0F0" : "#F0F9F0" }]}>
-                      <Text style={[styles.stockText, { color: (item.stock || 0) < 5 ? COLORS.danger : COLORS.success }]}>
-                        {item.stock || 0} in stock
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.productActions}>
-                <TouchableOpacity
-                  onPress={() => router.push(`/(tabs)/admin/EditProduct/${item.id}`)}
-                  style={styles.iconButton}
-                >
-                  <Ionicons name="pencil-outline" size={18} color={COLORS.textMuted} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleDeleteProduct(item.id)}
-                  style={[styles.iconButton, { backgroundColor: "#FFF0F0" }]}
-                >
-                  <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Animated.View>
-        )}
-      />
-    </Animated.View>
-  );
-
-  const renderOrders = () => (
-    <Animated.View entering={FadeInDown} style={styles.listView}>
-      <View style={styles.listHeader}>
-        <Text style={styles.viewTitle}>Order Management</Text>
-      </View>
-      <FlatList
-        data={orders}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        renderItem={({ item, index }) => (
-          <TouchableOpacity 
-            style={styles.orderCard}
-            onPress={() => {
-              setSelectedOrder(item);
-              setOrderModalVisible(true);
-            }}
-          >
-            <View style={styles.orderHeader}>
-              <Text style={styles.orderId}>#{item.orderId || item.id.slice(0,8)}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '15' }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
-              </View>
-            </View>
-            <Text style={styles.orderCustomer}>{item.customerName}</Text>
-            <View style={styles.orderFooter}>
-              <Text style={styles.orderDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-              <Text style={styles.orderTotal}>₪{item.total}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
-    </Animated.View>
-  );
-
-  const renderSettings = () => (
-    <ScrollView style={styles.settingsView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-      <Text style={styles.viewTitle}>Store Settings</Text>
-      
-      <View style={styles.settingsSection}>
-        <View style={styles.settingsHeader}>
-          <Text style={styles.settingsSectionTitle}>City & Delivery Management</Text>
-          <TouchableOpacity 
-            style={styles.addCityBtn}
-            onPress={() => {
-              setEditingCity(null);
-              setCityName("");
-              setDeliveryPrice("");
-              setCityModalVisible(true);
-            }}
-          >
-            <Ionicons name="add" size={20} color={COLORS.white} />
-            <Text style={styles.addCityBtnText}>Add City</Text>
-          </TouchableOpacity>
-        </View>
-
-        {cities.map((city: City) => (
-          <View key={city.id} style={styles.cityCard}>
-            <View>
-              <Text style={styles.cityName}>{city.name}</Text>
-              <Text style={styles.cityPrice}>Delivery: ₪{city.deliveryPrice}</Text>
-            </View>
-            <View style={styles.cityActions}>
-              <TouchableOpacity 
-                style={styles.iconButtonSmall}
-                onPress={() => {
-                  setEditingCity(city);
-                  setCityName(city.name);
-                  setDeliveryPrice(String(city.deliveryPrice));
-                  setCityModalVisible(true);
-                }}
-              >
-                <Ionicons name="pencil-outline" size={16} color={COLORS.textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.iconButtonSmall, { backgroundColor: "#FFF0F0" }]}
-                onPress={() => handleDeleteCity(city.id!)}
-              >
-                <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </View>
-    </ScrollView>
-  );
-
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case "pending": return COLORS.warning;
@@ -577,208 +168,280 @@ export default function AdminDashboard() {
     }
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <View style={styles.headerTitleRow}>
-            <Text style={styles.headerGreeting}>Welcome back,</Text>
-            <TouchableOpacity 
-              onPress={() => {
-                triggerHaptic();
-                router.replace("/(tabs)");
-              }}
-              style={styles.backToHomeBtn}
-            >
-              <Ionicons name="home-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.backToHomeText}>Store</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.headerTitle}>Admin Panel</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => triggerHaptic()}
-          style={styles.avatarContainer}
-        >
-          <Image
-            source={{ uri: "https://api.dicebear.com/7.x/avataaars/png?seed=Admin" }}
-            style={styles.avatar}
-            contentFit="cover"
-          />
-          <View style={styles.statusDot} />
-        </TouchableOpacity>
+  const renderOverview = () => (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <Animated.View entering={FadeInDown.duration(600)} style={styles.statsGrid}>
+        <StatCard title="Products" value={products.length} icon="cube-outline" colors={[COLORS.secondary, "#333333"]} isDark trend="+12%" />
+        <StatCard title="Orders" value={orders.length} icon="cart-outline" onPress={() => handleViewChange("orders")} trend="+5%" />
+        <StatCard title="Revenue" value={`\u20AA${totalRevenue.toFixed(2)}`} icon="stats-chart" colors={[COLORS.primary, "#FF8E8B"]} isDark />
+        <StatCard title="Categories" value={categories.length} icon="layers" colors={["#4A90E2", "#7EB6FF"]} isDark />
+      </Animated.View>
+
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <View style={styles.actionRow}>
+        <QuickActionButton label="New Category" icon="grid-outline" color={COLORS.primary} bgColor="#FFF0F0" onPress={() => router.push("/(tabs)/admin/Category/AddCategory")} />
+        <QuickActionButton label="Add Product" icon="add-circle-outline" color={COLORS.accent} bgColor="#F0F5FF" onPress={() => router.push("/(tabs)/admin/Product/AddProduct")} />
       </View>
 
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Recent Orders</Text>
+        <TouchableOpacity onPress={() => handleViewChange("orders")}><Text style={styles.seeAllText}>See All</Text></TouchableOpacity>
+      </View>
+      {orders.slice(0, 5).map((order: any) => (
+        <OrderRow key={order.id} order={order} onPress={() => { setSelectedOrder(order); setOrderModalVisible(true); }} getStatusColor={getStatusColor} />
+      ))}
+    </ScrollView>
+  );
+
+  const renderCategories = () => (
+    <View style={styles.listView}>
+      <ListHeader title="Category Management" onAdd={() => router.push("/(tabs)/admin/Category/AddCategory")} />
+      <FlatList
+        data={categories}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.listItem}>
+            <View style={styles.listItemLeft}>
+              <Image source={{ uri: item.image || "https://via.placeholder.com/150" }} style={styles.listImage} contentFit="cover" transition={500} />
+              <View>
+                <Text style={styles.listItemTitle}>{item.name}</Text>
+                <Text style={styles.listItemSubtitle}>{products.filter((p: any) => p.categoryId === item.id).length} Products</Text>
+              </View>
+            </View>
+            <View style={styles.listItemActions}>
+              <IconButton icon="pencil-outline" onPress={() => router.push(`/(tabs)/admin/Category/EditCategory/${item.id}`)} />
+              <IconButton icon="trash-outline" onPress={() => confirmDelete(item.id, "category")} color={COLORS.danger} bgColor="#FFF0F0" />
+            </View>
+          </View>
+        )}
+      />
+    </View>
+  );
+
+  const renderProducts = () => (
+    <View style={styles.listView}>
+      <ListHeader title="Product Management" onAdd={() => router.push("/(tabs)/admin/Product/AddProduct")} />
+      <FlatList
+        data={products}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.productListItem}>
+            <TouchableOpacity onPress={() => router.push(`/(tabs)/admin/Product/EditProduct/${item.id}`)} style={styles.productInfoRow}>
+              <Image source={{ uri: item.image || item.images?.[0] || "https://via.placeholder.com/150" }} style={styles.productImage} contentFit="cover" transition={500} />
+              <View style={styles.productInfo}>
+                <Text style={styles.productTitle}>{item.title}</Text>
+                <View style={styles.productSubInfo}>
+                  <Text style={styles.productPrice}>\u20AA{item.price}</Text>
+                  <View style={[styles.stockBadge, { backgroundColor: (item.stock || 0) < 5 ? "#FFF0F0" : "#F0F9F0" }]}>
+                    <Text style={[styles.stockText, { color: (item.stock || 0) < 5 ? COLORS.danger : COLORS.success }]}>{item.stock || 0} in stock</Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+            <View style={styles.productActions}>
+              <IconButton icon="pencil-outline" onPress={() => router.push(`/(tabs)/admin/Product/EditProduct/${item.id}`)} />
+              <IconButton icon="trash-outline" onPress={() => confirmDelete(item.id, "product")} color={COLORS.danger} bgColor="#FFF0F0" />
+            </View>
+          </View>
+        )}
+      />
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <AdminHeader router={router} triggerHaptic={triggerHaptic} />
       <View style={styles.content}>
         {activeView === "overview" && renderOverview()}
         {activeView === "categories" && renderCategories()}
         {activeView === "products" && renderProducts()}
-        {activeView === "orders" && renderOrders()}
-        {activeView === "settings" && renderSettings()}
+        {activeView === "orders" && <OrderList orders={orders} onSelect={(o) => { setSelectedOrder(o); setOrderModalVisible(true); }} getStatusColor={getStatusColor} />}
+        {activeView === "settings" && (
+          <SettingsView 
+            cities={cities} 
+            onAddCity={() => { setEditingCity(null); setCityName(""); setDeliveryPrice(""); setCityModalVisible(true); }}
+            onEditCity={(city) => { setEditingCity(city); setCityName(city.name); setDeliveryPrice(String(city.deliveryPrice)); setCityModalVisible(true); }}
+            onDeleteCity={(id) => confirmDelete(id, "city")}
+          />
+        )}
       </View>
 
-      <View style={styles.bottomNavContainer}>
-        <LinearGradient
-          colors={["rgba(255,255,255,0.9)", "rgba(255,255,255,1)"]}
-          style={styles.bottomNav}
-        >
-          <TouchableOpacity onPress={() => handleViewChange("overview")} style={styles.navItem}>
-            <View style={[styles.navIconBg, activeView === "overview" && styles.navIconBgActive]}>
-              <Ionicons name="grid-outline" size={20} color={activeView === "overview" ? COLORS.primary : COLORS.textMuted} />
-            </View>
-            <Text style={[styles.navText, activeView === "overview" && styles.navTextActive]}>Home</Text>
-          </TouchableOpacity>
+      <AdminBottomNav activeView={activeView} handleViewChange={handleViewChange} />
 
-          <TouchableOpacity onPress={() => handleViewChange("categories")} style={styles.navItem}>
-            <View style={[styles.navIconBg, activeView === "categories" && styles.navIconBgActive]}>
-              <Ionicons name="layers-outline" size={20} color={activeView === "categories" ? COLORS.primary : COLORS.textMuted} />
-            </View>
-            <Text style={[styles.navText, activeView === "categories" && styles.navTextActive]}>Cats</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => handleViewChange("products")} style={styles.navItem}>
-            <View style={[styles.navIconBg, activeView === "products" && styles.navIconBgActive]}>
-              <Ionicons name="shirt-outline" size={20} color={activeView === "products" ? COLORS.primary : COLORS.textMuted} />
-            </View>
-            <Text style={[styles.navText, activeView === "products" && styles.navTextActive]}>Items</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => handleViewChange("orders")} style={styles.navItem}>
-            <View style={[styles.navIconBg, activeView === "orders" && styles.navIconBgActive]}>
-              <Ionicons name="list-outline" size={20} color={activeView === "orders" ? COLORS.primary : COLORS.textMuted} />
-            </View>
-            <Text style={[styles.navText, activeView === "orders" && styles.navTextActive]}>Orders</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => handleViewChange("settings")} style={styles.navItem}>
-            <View style={[styles.navIconBg, activeView === "settings" && styles.navIconBgActive]}>
-              <Ionicons name="settings-outline" size={20} color={activeView === "settings" ? COLORS.primary : COLORS.textMuted} />
-            </View>
-            <Text style={[styles.navText, activeView === "settings" && styles.navTextActive]}>Settings</Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
-
-      <DeleteConfirmModal
-        visible={deleteModalVisible}
-        onClose={() => setDeleteModalVisible(false)}
-        onConfirm={performDelete}
-        title={`Delete ${itemToDelete?.type}`}
-        message={`Are you sure you want to remove this ${itemToDelete?.type}? This action cannot be undone.`}
-        isLoading={isDeleting}
-      />
-
-      <StatusDialog
-        visible={statusVisible}
-        type={statusConfig.type}
-        title={statusConfig.title}
-        message={statusConfig.message}
-        onClose={() => setStatusVisible(false)}
-      />
-
-      {/* Order Details Modal */}
-      <Modal visible={orderModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.orderModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Order Details</Text>
-              <TouchableOpacity onPress={() => setOrderModalVisible(false)}>
-                <Ionicons name="close" size={24} color={COLORS.textMain} />
-              </TouchableOpacity>
-            </View>
-            
-            {selectedOrder && (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={styles.orderDetailSection}>
-                  <Text style={styles.detailLabel}>Customer Information</Text>
-                  <Text style={styles.detailValue}>{selectedOrder.customerName}</Text>
-                  <Text style={styles.detailValue}>{selectedOrder.phone1}</Text>
-                  <Text style={styles.detailValue}>{selectedOrder.address}, {selectedOrder.city}</Text>
-                </View>
-
-                <View style={styles.orderDetailSection}>
-                  <Text style={styles.detailLabel}>Items</Text>
-                  {selectedOrder.items.map((item: any, i: number) => (
-                    <View key={i} style={styles.orderItemRow}>
-                      <Text style={styles.orderItemText}>{item.quantity}x {item.title}</Text>
-                      <Text style={styles.orderItemPrice}>₪{item.price * item.quantity}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View style={styles.orderDetailSection}>
-                  <Text style={styles.detailLabel}>Payment & Shipping</Text>
-                  <View style={styles.summaryRow}>
-                    <Text>Subtotal</Text>
-                    <Text>₪{selectedOrder.subtotal}</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text>Shipping</Text>
-                    <Text>₪{selectedOrder.shippingCost}</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={{ fontWeight: "800" }}>Total</Text>
-                    <Text style={{ fontWeight: "800", color: COLORS.primary }}>₪{selectedOrder.total}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.orderDetailSection}>
-                  <Text style={styles.detailLabel}>Update Status</Text>
-                  <View style={styles.statusButtons}>
-                    {["pending", "shipped", "delivered", "cancelled"].map((st) => (
-                      <TouchableOpacity 
-                        key={st}
-                        onPress={() => handleUpdateStatus(selectedOrder.id, st)}
-                        style={[
-                          styles.statusBtn, 
-                          selectedOrder.status === st && { backgroundColor: getStatusColor(st) }
-                        ]}
-                      >
-                        <Text style={[styles.statusBtnText, selectedOrder.status === st && { color: "#fff" }]}>
-                          {st.toUpperCase()}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* City Edit/Add Modal */}
-      <Modal visible={cityModalVisible} animationType="fade" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.cityModalContent}>
-            <Text style={styles.modalTitle}>{editingCity ? "Edit City" : "Add New City"}</Text>
-            <TextInput 
-              placeholder="City Name"
-              value={cityName}
-              onChangeText={setCityName}
-              style={styles.modalInput}
-            />
-            <TextInput 
-              placeholder="Delivery Price (₪)"
-              value={deliveryPrice}
-              onChangeText={setDeliveryPrice}
-              keyboardType="numeric"
-              style={styles.modalInput}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setCityModalVisible(false)}>
-                <Text style={styles.modalCancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveCity} disabled={savingCity}>
-                {savingCity ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSaveBtnText}>Save</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <DeleteConfirmModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} onConfirm={performDelete} title={`Delete ${itemToDelete?.type}`} message={`Are you sure? This cannot be undone.`} isLoading={isDeleting} />
+      <StatusDialog visible={statusVisible} type={statusConfig.type} title={statusConfig.title} message={statusConfig.message} onClose={() => setStatusVisible(false)} />
+      <OrderDetailsModal visible={orderModalVisible} onClose={() => setOrderModalVisible(false)} order={selectedOrder} onUpdateStatus={handleUpdateStatus} getStatusColor={getStatusColor} />
+      <CityModal visible={cityModalVisible} onClose={() => setCityModalVisible(false)} onSave={handleSaveCity} cityName={cityName} setCityName={setCityName} deliveryPrice={deliveryPrice} setDeliveryPrice={setDeliveryPrice} isEditing={!!editingCity} isSaving={savingCity} />
     </View>
   );
 }
+
+
+interface QuickActionButtonProps {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  bgColor: string;
+  onPress: () => void;
+}
+
+const QuickActionButton = ({ label, icon, color, bgColor, onPress }: QuickActionButtonProps) => (
+  <TouchableOpacity onPress={onPress} style={styles.actionButton}>
+    <View style={styles.actionButtonInner}>
+      <View style={[styles.actionIconContainer, { backgroundColor: bgColor }]}><Ionicons name={icon} size={24} color={color} /></View>
+      <Text style={styles.actionButtonTextDark}>{label}</Text>
+    </View>
+  </TouchableOpacity>
+);
+
+interface IconButtonProps {
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  color?: string;
+  bgColor?: string;
+}
+
+const IconButton = ({ icon, onPress, color = COLORS.textMuted, bgColor = COLORS.white }: IconButtonProps) => (
+  <TouchableOpacity onPress={onPress} style={[styles.iconButtonSmall, { backgroundColor: bgColor }]}>
+    <Ionicons name={icon} size={18} color={color} />
+  </TouchableOpacity>
+);
+
+interface ListHeaderProps {
+  title: string;
+  onAdd?: () => void;
+}
+
+const ListHeader = ({ title, onAdd }: ListHeaderProps) => (
+  <View style={styles.listHeader}>
+    <Text style={styles.viewTitle}>{title}</Text>
+    {onAdd && (
+      <TouchableOpacity style={styles.addIconSmall} onPress={onAdd}>
+        <Ionicons name="add" size={24} color={COLORS.white} />
+      </TouchableOpacity>
+    )}
+  </View>
+);
+
+interface OrderRowProps {
+  order: any;
+  onPress: () => void;
+  getStatusColor: (status: string) => string;
+}
+
+const OrderRow = ({ order, onPress, getStatusColor }: OrderRowProps) => (
+  <TouchableOpacity style={styles.miniOrderCard} onPress={onPress}>
+    <View style={styles.miniOrderLeft}>
+      <Text style={styles.miniOrderId}>#{order.orderId || order.id.slice(0,6)}</Text>
+      <Text style={styles.miniOrderName}>{order.customerName}</Text>
+    </View>
+    <View style={styles.miniOrderRight}>
+      <Text style={styles.miniOrderTotal}>\u20AA{order.total}</Text>
+      <View style={[styles.miniStatusBadge, { backgroundColor: getStatusColor(order.status) + '15' }]}>
+        <Text style={[styles.miniStatusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+);
+
+interface OrderListProps {
+  orders: any[];
+  onSelect: (order: any) => void;
+  getStatusColor: (status: string) => string;
+}
+
+const OrderList = ({ orders, onSelect, getStatusColor }: OrderListProps) => (
+  <View style={styles.listView}>
+    <ListHeader title="Order Management" />
+    <FlatList
+      data={orders}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => (
+        <TouchableOpacity style={styles.orderCard} onPress={() => onSelect(item)}>
+          <View style={styles.orderHeader}>
+            <Text style={styles.orderId}>#{item.orderId || item.id.slice(0,8)}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '15' }]}><Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text></View>
+          </View>
+          <Text style={styles.orderCustomer}>{item.customerName}</Text>
+          <View style={styles.orderFooter}>
+            <Text style={styles.orderDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+            <Text style={styles.orderTotal}>\u20AA{item.total}</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+    />
+  </View>
+);
+
+interface SettingsViewProps {
+  cities: City[];
+  onAddCity: () => void;
+  onEditCity: (city: City) => void;
+  onDeleteCity: (id: string) => void;
+}
+
+const SettingsView = ({ cities, onAddCity, onEditCity, onDeleteCity }: SettingsViewProps) => (
+  <ScrollView style={styles.settingsView} showsVerticalScrollIndicator={false}>
+    <Text style={styles.viewTitle}>Store Settings</Text>
+    <View style={styles.settingsSection}>
+      <View style={styles.settingsHeader}>
+        <Text style={styles.settingsSectionTitle}>City & Delivery Management</Text>
+        <TouchableOpacity style={styles.addCityBtn} onPress={onAddCity}>
+          <Ionicons name="add" size={20} color={COLORS.white} /><Text style={styles.addCityBtnText}>Add City</Text>
+        </TouchableOpacity>
+      </View>
+      {cities.map((city: City) => (
+        <View key={city.id} style={styles.cityCard}>
+          <View><Text style={styles.cityName}>{city.name}</Text><Text style={styles.cityPrice}>Delivery: \u20AA{city.deliveryPrice}</Text></View>
+          <View style={styles.cityActions}>
+            <IconButton icon="pencil-outline" onPress={() => onEditCity(city)} />
+            <IconButton icon="trash-outline" onPress={() => onDeleteCity(city.id!)} color={COLORS.danger} bgColor="#FFF0F0" />
+          </View>
+        </View>
+      ))}
+    </View>
+  </ScrollView>
+);
+
+const AdminHeader = ({ router, triggerHaptic }: any) => (
+  <View style={styles.header}>
+    <View>
+      <View style={styles.headerTitleRow}>
+        <Text style={styles.headerGreeting}>Welcome back,</Text>
+        <TouchableOpacity onPress={() => { triggerHaptic(); router.replace("/(tabs)"); }} style={styles.backToHomeBtn}>
+          <Ionicons name="home-outline" size={16} color={COLORS.primary} /><Text style={styles.backToHomeText}>Store</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.headerTitle}>Admin Panel</Text>
+    </View>
+    <View style={styles.avatarContainer}>
+      <Image source={{ uri: "https://api.dicebear.com/7.x/avataaars/png?seed=Admin" }} style={styles.avatar} contentFit="cover" />
+      <View style={styles.statusDot} />
+    </View>
+  </View>
+);
+
+const AdminBottomNav = ({ activeView, handleViewChange }: any) => (
+  <View style={styles.bottomNavContainer}>
+    <LinearGradient colors={["rgba(255,255,255,0.9)", "rgba(255,255,255,1)"]} style={styles.bottomNav}>
+      <NavItem view="overview" label="Home" icon="grid-outline" activeView={activeView} onPress={handleViewChange} />
+      <NavItem view="categories" label="Cats" icon="layers-outline" activeView={activeView} onPress={handleViewChange} />
+      <NavItem view="products" label="Items" icon="shirt-outline" activeView={activeView} onPress={handleViewChange} />
+      <NavItem view="orders" label="Orders" icon="list-outline" activeView={activeView} onPress={handleViewChange} />
+      <NavItem view="settings" label="Settings" icon="settings-outline" activeView={activeView} onPress={handleViewChange} />
+    </LinearGradient>
+  </View>
+);
+
+const NavItem = ({ view, label, icon, activeView, onPress }: any) => (
+  <TouchableOpacity onPress={() => onPress(view)} style={styles.navItem}>
+    <View style={[styles.navIconBg, activeView === view && styles.navIconBgActive]}>
+      <Ionicons name={icon} size={20} color={activeView === view ? COLORS.primary : COLORS.textMuted} />
+    </View>
+    <Text style={[styles.navText, activeView === view && styles.navTextActive]}>{label}</Text>
+  </TouchableOpacity>
+);
+
 
 const styles = StyleSheet.create({
   container: {
@@ -801,13 +464,11 @@ const styles = StyleSheet.create({
   backToHomeBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.white,
+    gap: 4,
+    backgroundColor: "#FFF0F0",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   backToHomeText: {
     fontSize: 12,
@@ -820,8 +481,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
+    fontSize: 28,
+    fontWeight: "900",
     color: COLORS.textMain,
     letterSpacing: -0.5,
   },
@@ -832,7 +493,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.white,
   },
   statusDot: {
     position: "absolute",
@@ -842,7 +505,7 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     backgroundColor: COLORS.success,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: COLORS.white,
   },
   content: {
@@ -850,142 +513,59 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 140,
+    paddingBottom: 120,
   },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  statCard: {
-    width: "48%",
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  statIconHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 8,
-  },
-  statValueLight: {
-    color: COLORS.white,
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  statLabelLight: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  statValueDark: {
-    color: COLORS.textMain,
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  statLabelDark: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  statTrend: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-    gap: 4,
-  },
-  trendText: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "#4CAF50",
-  },
-  revenueCard: {
-    width: "100%",
-    padding: 20,
-    borderRadius: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    overflow: "hidden",
-  },
-  revenueValue: {
-    fontSize: 24,
-    fontWeight: "900",
-    letterSpacing: -1,
-  },
-  revenueIconContainerOverlay: {
-    opacity: 0.8,
+    marginHorizontal: -8,
+    marginBottom: 32,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
-    marginTop: 8,
-    paddingHorizontal: 24,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "800",
     color: COLORS.textMain,
+    marginBottom: 16,
   },
   seeAllText: {
     fontSize: 14,
     color: COLORS.primary,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   actionRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
-    paddingHorizontal: 24,
+    gap: 16,
+    marginBottom: 32,
   },
   actionButton: {
     flex: 1,
-    borderRadius: 20,
-    overflow: "hidden",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
   },
   actionButtonInner: {
-    padding: 12,
+    backgroundColor: COLORS.white,
+    padding: 16,
+    borderRadius: 24,
     alignItems: "center",
-    flexDirection: "row",
     gap: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   actionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
   },
   actionButtonTextDark: {
-    color: COLORS.textMain,
+    fontSize: 14,
     fontWeight: "700",
-    fontSize: 13,
+    color: COLORS.textMain,
   },
   listView: {
     flex: 1,
@@ -995,30 +575,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 24,
   },
   viewTitle: {
-    fontSize: 20,
-    fontWeight: "800",
+    fontSize: 22,
+    fontWeight: "900",
     color: COLORS.textMain,
-    marginBottom: 20,
   },
   addIconSmall: {
-    backgroundColor: COLORS.secondary,
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 12,
+    backgroundColor: COLORS.secondary,
     justifyContent: "center",
     alignItems: "center",
   },
   listItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     backgroundColor: COLORS.white,
     padding: 12,
     borderRadius: 20,
     marginBottom: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -1028,9 +607,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   listImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 50,
+    height: 50,
+    borderRadius: 12,
   },
   listItemTitle: {
     fontSize: 16,
@@ -1040,44 +619,41 @@ const styles = StyleSheet.create({
   listItemSubtitle: {
     fontSize: 12,
     color: COLORS.textMuted,
-    marginTop: 2,
   },
   listItemActions: {
     flexDirection: "row",
     gap: 8,
   },
   iconButtonSmall: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#F5F5F5",
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   productListItem: {
     backgroundColor: COLORS.white,
+    borderRadius: 24,
     padding: 12,
-    borderRadius: 20,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   productInfoRow: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    gap: 16,
   },
   productImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
+    width: 80,
+    height: 80,
+    borderRadius: 18,
   },
   productInfo: {
     flex: 1,
-    marginLeft: 16,
+    gap: 4,
   },
   productTitle: {
     fontSize: 16,
@@ -1087,13 +663,12 @@ const styles = StyleSheet.create({
   productSubInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
-    gap: 8,
+    gap: 12,
   },
   productPrice: {
-    color: COLORS.primary,
+    fontSize: 18,
     fontWeight: "800",
-    fontSize: 15,
+    color: COLORS.primary,
   },
   stockBadge: {
     paddingHorizontal: 8,
@@ -1101,88 +676,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   stockText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
   },
   productActions: {
     flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 8,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#F5F5F5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bottomNavContainer: {
-    position: "absolute",
-    bottom: 30,
-    left: 20,
-    right: 20,
-    borderRadius: 24,
-    overflow: "hidden",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-  bottomNav: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingVertical: 12,
-    backgroundColor: "rgba(255,255,255,0.95)",
-  },
-  navItem: {
-    alignItems: "center",
-    gap: 4,
-  },
-  navIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "transparent",
-  },
-  navIconBgActive: {
-    backgroundColor: "#FFF0F0",
-  },
-  navText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: COLORS.textMuted,
-  },
-  navTextActive: {
-    color: COLORS.primary,
-  },
-  centeredContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
   miniOrderCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     backgroundColor: COLORS.white,
     padding: 16,
     borderRadius: 20,
     marginBottom: 12,
-    marginHorizontal: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   miniOrderLeft: {
-    gap: 4,
+    gap: 2,
   },
   miniOrderId: {
     fontSize: 12,
@@ -1324,118 +842,51 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+  bottomNavContainer: {
+    position: "absolute",
+    bottom: 24,
+    left: 24,
+    right: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
+  },
+  bottomNav: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingVertical: 12,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  navItem: {
+    alignItems: "center",
+    gap: 4,
+  },
+  navIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
   },
-  orderModalContent: {
-    backgroundColor: COLORS.white,
-    width: "100%",
-    maxHeight: "80%",
-    borderRadius: 24,
-    padding: 24,
+  navIconBgActive: {
+    backgroundColor: "#FFF0F0",
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: COLORS.textMain,
-  },
-  orderDetailSection: {
-    marginBottom: 24,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  detailLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: COLORS.textMuted,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  detailValue: {
-    fontSize: 16,
-    color: COLORS.textMain,
-    marginBottom: 4,
-  },
-  orderItemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  orderItemText: {
-    fontSize: 14,
-    color: COLORS.textMain,
-  },
-  orderItemPrice: {
-    fontSize: 14,
+  navText: {
+    fontSize: 10,
     fontWeight: "700",
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  statusButtons: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  statusBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: "#F5F5F5",
-  },
-  statusBtnText: {
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  cityModalContent: {
-    backgroundColor: COLORS.white,
-    width: "90%",
-    borderRadius: 24,
-    padding: 24,
-    gap: 16,
-  },
-  modalInput: {
-    backgroundColor: "#F5F5F5",
-    padding: 16,
-    borderRadius: 16,
-    fontSize: 16,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-  modalCancelBtn: {
-    flex: 1,
-    padding: 16,
-    alignItems: "center",
-  },
-  modalCancelBtnText: {
     color: COLORS.textMuted,
-    fontWeight: "700",
   },
-  modalSaveBtn: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    padding: 16,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  modalSaveBtnText: {
-    color: COLORS.white,
-    fontWeight: "800",
+  navTextActive: {
+    color: COLORS.primary,
   },
 });

@@ -23,7 +23,6 @@ export const getCities = async () => {
       id: doc.id,
       ...doc.data()
     } as City));
-    // Sort locally by name to avoid index requirements
     return cityList.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
     console.error("SDK Get Cities Error:", error);

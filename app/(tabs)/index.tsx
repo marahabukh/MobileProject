@@ -16,7 +16,6 @@ import { useRouter } from "expo-router";
 
 import { getCategories } from "@/api/Category";
 import { getBestSellers } from "@/api/Product";
-import { getHero } from "@/api/HereSection";
 import CategoryCard from "@/components/CategoryCard";
 import BottomNavigation from "@/components/Buttomnavigation";   
 import ErrorView from "@/components/ErrorView";
@@ -27,15 +26,6 @@ export default function HomeScreen() {
   const cardWidth = width * 0.4;
   const cardMargin = width * 0.03;
 
-  const { 
-    data: hero, 
-    isLoading: heroLoading, 
-    isError: heroError, 
-    refetch: refetchHero 
-  } = useQuery({
-    queryKey: ["hero"],
-    queryFn: getHero,
-  });
 
   const { 
     data: categories = [], 
@@ -56,12 +46,11 @@ export default function HomeScreen() {
   });
 
   const onRefresh = () => {
-    refetchHero();
     refetchCategories();
     refetchBestSellers();
   };
 
-  const hasError = heroError && categoriesError && bestSellersError && categories.length === 0 && bestSellers.length === 0;
+  const hasError = categoriesError && bestSellersError && categories.length === 0 && bestSellers.length === 0;
 
   if (hasError) {
     return <ErrorView message="Failed to load content. Please check your connection." onRetry={onRefresh} />;
@@ -79,25 +68,15 @@ export default function HomeScreen() {
         }
       >
        
-        {heroLoading ? (
-          <View style={[styles.hero, { justifyContent: "center" }]}>
-            <Text style={styles.heroTitle}>Loading...</Text>
-          </View>
-        ) : hero && hero.imageUrl ? (
-          <ImageBackground
-            source={require("../../assets/images/hero.png")}
-            style={styles.hero}
-            resizeMode="cover"
-          >
-            <View style={styles.heroOverlay}>
-              <Text style={styles.heroTitle}>Welcome 👋</Text>
-            </View>
-          </ImageBackground>
-        ) : (
-          <View style={styles.hero}>
+        <ImageBackground
+          source={require("../../assets/images/hero.png")}
+          style={styles.hero}
+          resizeMode="cover"
+        >
+          <View style={styles.heroOverlay}>
             <Text style={styles.heroTitle}>Welcome 👋</Text>
           </View>
-        )}
+        </ImageBackground>
 
         
         <View style={styles.sectionHeader}>

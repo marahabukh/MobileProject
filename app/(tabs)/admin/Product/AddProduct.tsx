@@ -13,16 +13,17 @@ import {
   StyleSheet,
   Dimensions,
 } from "react-native";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { getCategories } from "@/api/Category";
-import { getProductById, updateProduct } from "@/api/Product";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { createProduct } from "@/api/Product";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import StatusDialog from "@/components/StatusDialog";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
+import StatusDialog from "@/components/StatusDialog";
 
 const { width } = Dimensions.get("window");
 
@@ -35,61 +36,65 @@ const COLORS = {
   textMain: "#1A1A1A",
   textMuted: "#7C7C7C",
   border: "rgba(0,0,0,0.05)",
+  glass: "rgba(255, 255, 255, 0.8)",
   danger: "#FF4D4D",
 };
 
-export default function EditProduct() {
+interface ProductFormData {
+  title: string;
+  price: string;
+  stock: string;
+  images: { url: string }[];
+  categoryId: string;
+  bestSeller: boolean;
+}
+
+export default function AddProduct() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
   const queryClient = useQueryClient();
   
-  const [title, setTitle] = useState("");
-  const [price, setPrice] = useState("");
-  const [images, setImages] = useState<string[]>([""]);
-  const [stock, setStock] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [bestSeller, setBestSeller] = useState(false);
-  
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetchingCats, setFetchingCats] = useState(true);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusConfig, setStatusConfig] = useState({ type: "success" as "success" | "error", title: "", message: "" });
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const [cats, product] = await Promise.all([
-          getCategories(),
-          getProductById(id as string)
-        ]);
+  const { control, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<ProductFormData>({
+    defaultValues: {
+      title: "",
+      price: "",
+      stock: "",
+      images: [{ url: "" }],
+      categoryId: "",
+      bestSeller: false,
+    }
+  });
 
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "images",
+  });
+
+  const watchImages = watch("images");
+  const watchCategoryId = watch("categoryId");
+  const watchBestSeller = watch("bestSeller");
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const cats = await getCategories();
         setCategories(cats);
-        if (product) {
-          setTitle(product.title || "");
-          setPrice(String(product.price || ""));
-          
-          if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-            setImages(product.images);
-          } else if (product.image) {
-            setImages([product.image]);
-          } else {
-            setImages([""]);
-          }
-          
-          setStock(String(product.stock || "0"));
-          setCategoryId(product.categoryId || null);
-          setBestSeller(!!product.bestSeller);
+        if (cats.length > 0) {
+          setValue("categoryId", cats[0].id);
         }
       } catch (err) {
-        console.error("Error fetching data:", err);
-        Alert.alert("Error", "Failed to load product details");
+        console.error("Error fetching categories:", err);
       } finally {
-        setLoading(false);
+        setFetchingCats(false);
       }
     };
-    if (id) init();
-  }, [id]);
+    fetchCategories();
+  }, [setValue]);
 
   const triggerHaptic = useCallback((type: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) => {
     if (Platform.OS !== "web") {
@@ -97,36 +102,17 @@ export default function EditProduct() {
     }
   }, []);
 
-  const addImageField = () => {
-    triggerHaptic();
-    setImages([...images, ""]);
-  };
+  const handleAddProduct = async (data: ProductFormData) => {
+    const validImages = data.images.map(img => img.url).filter(url => url.trim() !== "");
+    const numericPrice = Number(data.price);
 
-  const updateImageUri = (text: string, index: number) => {
-    const newImages = [...images];
-    newImages[index] = text;
-    setImages(newImages);
-  };
-
-  const removeImageField = (index: number) => {
-    if (images.length > 1) {
-      triggerHaptic();
-      const newImages = images.filter((_, i) => i !== index);
-      setImages(newImages);
-    }
-  };
-
-  const handleUpdateProduct = async () => {
-    const validImages = images.filter(img => img.trim() !== "");
-    const numericPrice = Number(price);
-
-    if (!title) {
+    if (!data.title) {
       triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
       setStatusConfig({ type: "error", title: "Missing Name", message: "Please enter a product name." });
       return setStatusVisible(true);
     }
 
-    if (!price || validImages.length === 0) {
+    if (!data.price || validImages.length === 0) {
       triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
       setStatusConfig({ type: "error", title: "Required Fields", message: "Please fill in price and at least one image." });
       return setStatusVisible(true);
@@ -138,47 +124,42 @@ export default function EditProduct() {
       return setStatusVisible(true);
     }
 
-    if (stock !== "" && Number(stock) < 0) {
+    if (data.stock !== "" && Number(data.stock) < 0) {
       triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
       setStatusConfig({ type: "error", title: "Invalid Stock", message: "Stock cannot be a negative number." });
       return setStatusVisible(true);
     }
 
-    setSaving(true);
+    setLoading(true);
     triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await updateProduct(id as string, {
-        title,
+      await createProduct({
+        title: data.title,
         price: numericPrice,
         images: validImages,
-        categoryId,
-        bestSeller,
-        stock: Number(stock),
+        categoryId: data.categoryId,
+        bestSeller: data.bestSeller,
+        stock: Number(data.stock || 0),
       });
 
-      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      await queryClient.invalidateQueries({ queryKey: ["products"] });
       await queryClient.invalidateQueries({ queryKey: ["bestSellers"] });
+
       triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
-      setStatusConfig({ type: "success", title: "Success! 🎉", message: "Product updated successfully." });
+      setStatusConfig({ type: "success", title: "Success! 🎉", message: "Product listed successfully." });
       setStatusVisible(true);
+      
+      reset();
+
       setTimeout(() => router.back(), 1500);
     } catch (error: any) {
-      setStatusConfig({ type: "error", title: "Error", message: error.message || "Failed to update product." });
+      setStatusConfig({ type: "error", title: "Error", message: error.message || "Failed to save." });
       setStatusVisible(true);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
-
-  if (loading) {
-    return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loaderText}>Fetching product details...</Text>
-      </View>
-    );
-  }
 
   return (
     <KeyboardAvoidingView 
@@ -200,17 +181,17 @@ export default function EditProduct() {
           >
             <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Product</Text>
+          <Text style={styles.headerTitle}>New Product</Text>
           <View style={{ width: 48 }} /> 
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(100)} style={styles.imagePreviewScroll}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.previewContainer}>
-            {images.filter(img => img.trim() !== "").length > 0 ? (
-              images.filter(img => img.trim() !== "").map((img, idx) => (
+            {watchImages.filter(img => img.url.trim() !== "").length > 0 ? (
+              watchImages.filter(img => img.url.trim() !== "").map((img, idx) => (
                 <View key={idx} style={styles.imagePreviewCard}>
                   <Image 
-                    source={{ uri: img }} 
+                    source={{ uri: img.url }} 
                     style={styles.previewImage} 
                     contentFit="cover"
                     transition={500}
@@ -220,7 +201,7 @@ export default function EditProduct() {
             ) : (
               <View style={[styles.imagePreviewCard, styles.placeholderCard]}>
                 <Ionicons name="image-outline" size={48} color={COLORS.textMuted} />
-                <Text style={styles.placeholderText}>No images found</Text>
+                <Text style={styles.placeholderText}>Enter URLs to preview</Text>
               </View>
             )}
           </ScrollView>
@@ -229,34 +210,52 @@ export default function EditProduct() {
         <Animated.View entering={FadeInDown.delay(200)} style={styles.formContainer}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Product Name</Text>
-            <TextInput
-              placeholder="Product Title"
-              value={title}
-              onChangeText={setTitle}
-              style={styles.input}
-              placeholderTextColor="#A0A0A0"
+            <Controller
+              control={control}
+              name="title"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  placeholder="e.g. Premium Leather Jacket"
+                  value={value}
+                  onChangeText={onChange}
+                  style={styles.input}
+                  placeholderTextColor="#A0A0A0"
+                />
+              )}
             />
           </View>
 
           <View style={styles.row}>
             <View style={styles.flex1}>
               <Text style={styles.label}>Price (₪)</Text>
-              <TextInput
-                placeholder="0.00"
-                value={price}
-                onChangeText={setPrice}
-                keyboardType="numeric"
-                style={styles.input}
+              <Controller
+                control={control}
+                name="price"
+                render={({ field: { onChange, value } }) => (
+                  <TextInput
+                    placeholder="0.00"
+                    value={value}
+                    onChangeText={onChange}
+                    keyboardType="numeric"
+                    style={styles.input}
+                  />
+                )}
               />
             </View>
             <View style={[styles.flex1, { marginLeft: 16 }]}>
               <Text style={styles.label}>Stock</Text>
-              <TextInput
-                placeholder="0"
-                value={stock}
-                onChangeText={(val) => setStock(val.replace(/[^0-9]/g, ""))}
-                keyboardType="numeric"
-                style={styles.input}
+              <Controller
+                control={control}
+                name="stock"
+                render={({ field: { onChange, value } }) => (
+                  <TextInput
+                    placeholder="0"
+                    value={value}
+                    onChangeText={(val) => onChange(val.replace(/[^0-9]/g, ""))}
+                    keyboardType="numeric"
+                    style={styles.input}
+                  />
+                )}
               />
             </View>
           </View>
@@ -264,21 +263,27 @@ export default function EditProduct() {
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>Image URLs</Text>
-              <TouchableOpacity onPress={addImageField} style={styles.addButtonSmall}>
+              <TouchableOpacity onPress={() => { triggerHaptic(); append({ url: "" }); }} style={styles.addButtonSmall}>
                 <Ionicons name="add-circle" size={24} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
-            {images.map((img, index) => (
-              <View key={index} style={styles.multiInputWrapper}>
-                <TextInput
-                  placeholder={`Image URL ${index + 1}`}
-                  value={img}
-                  onChangeText={(text) => updateImageUri(text, index)}
-                  style={[styles.input, { flex: 1 }]}
-                  autoCapitalize="none"
+            {fields.map((field, index) => (
+              <View key={field.id} style={styles.multiInputWrapper}>
+                <Controller
+                  control={control}
+                  name={`images.${index}.url`}
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      placeholder={`Image URL ${index + 1}`}
+                      value={value}
+                      onChangeText={onChange}
+                      style={[styles.input, { flex: 1 }]}
+                      autoCapitalize="none"
+                    />
+                  )}
                 />
-                {images.length > 1 && (
-                  <TouchableOpacity onPress={() => removeImageField(index)} style={styles.removeButton}>
+                {fields.length > 1 && (
+                  <TouchableOpacity onPress={() => { triggerHaptic(); remove(index); }} style={styles.removeButton}>
                     <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
                   </TouchableOpacity>
                 )}
@@ -287,27 +292,31 @@ export default function EditProduct() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-              {categories.map((cat, index) => (
-                <Animated.View key={cat.id} entering={FadeInRight.delay(index * 50)}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      triggerHaptic();
-                      setCategoryId(cat.id);
-                    }}
-                    style={[
-                      styles.chip,
-                      categoryId === cat.id && styles.chipSelected
-                    ]}
-                  >
-                    <Text style={[styles.chipText, categoryId === cat.id && styles.chipTextSelected]}>
-                      {cat.name}
-                    </Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              ))}
-            </ScrollView>
+            <Text style={styles.sectionTitle}>Select Category</Text>
+            {fetchingCats ? (
+              <ActivityIndicator color={COLORS.primary} style={{ marginTop: 10 }} />
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+                {categories.map((cat, index) => (
+                  <Animated.View key={cat.id} entering={FadeInRight.delay(index * 50)}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        triggerHaptic();
+                        setValue("categoryId", cat.id);
+                      }}
+                      style={[
+                        styles.chip,
+                        watchCategoryId === cat.id && styles.chipSelected
+                      ]}
+                    >
+                      <Text style={[styles.chipText, watchCategoryId === cat.id && styles.chipTextSelected]}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           <View style={styles.switchCard}>
@@ -320,20 +329,26 @@ export default function EditProduct() {
                 <Text style={styles.switchSubLabel}>Feature on home screen</Text>
               </View>
             </View>
-            <Switch 
-              value={bestSeller} 
-              onValueChange={(val) => {
-                triggerHaptic();
-                setBestSeller(val);
-              }}
-              trackColor={{ false: "#E9E9E9", true: COLORS.primary }}
-              thumbColor={Platform.OS === "ios" ? "#FFFFFF" : bestSeller ? COLORS.primary : "#FFFFFF"}
+            <Controller
+              control={control}
+              name="bestSeller"
+              render={({ field: { onChange, value } }) => (
+                <Switch 
+                  value={value} 
+                  onValueChange={(val) => {
+                    triggerHaptic();
+                    onChange(val);
+                  }}
+                  trackColor={{ false: "#E9E9E9", true: COLORS.primary }}
+                  thumbColor={Platform.OS === "ios" ? "#FFFFFF" : value ? COLORS.primary : "#FFFFFF"}
+                />
+              )}
             />
           </View>
 
           <TouchableOpacity 
-            disabled={saving}
-            onPress={handleUpdateProduct}
+            disabled={loading}
+            onPress={handleSubmit(handleAddProduct)}
             activeOpacity={0.8}
             style={styles.submitButtonContainer}
           >
@@ -343,12 +358,12 @@ export default function EditProduct() {
               end={{ x: 1, y: 1 }}
               style={styles.submitButton}
             >
-              {saving ? (
+              {loading ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <>
-                  <Text style={styles.submitText}>Save Changes</Text>
-                  <Ionicons name="checkmark-circle-outline" size={20} color="white" style={{ marginLeft: 8 }} />
+                  <Text style={styles.submitText}>Publish Product</Text>
+                  <Ionicons name="arrow-forward" size={20} color="white" style={{ marginLeft: 8 }} />
                 </>
               )}
             </LinearGradient>
@@ -370,18 +385,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-  },
-  loaderText: {
-    marginTop: 16,
-    color: COLORS.textMuted,
-    fontSize: 16,
-    fontWeight: "500",
   },
   scrollView: {
     flex: 1,

@@ -6,7 +6,6 @@ import React from "react";
 export default function TabsLayout() {
   const { user, isLoading } = useAuth();
 
-  // Wait for session to load
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
@@ -15,7 +14,6 @@ export default function TabsLayout() {
     );
   }
 
-  // If no user is logged in, redirect to the login screen
   if (!user) {
     return <Redirect href="/Auth/login" />;
   }

@@ -48,7 +48,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     loadCart();
   }, []);
 
-  // Save cart to AsyncStorage whenever it changes
   useEffect(() => {
     const saveCart = async () => {
       try {

@@ -18,7 +18,6 @@ export const useCart = () => {
     return sum + Number(item.price || 0) * Number(item.quantity || 1);
   }, 0);
 
-  // Update Quantity Mutation
   const updateQuantity = useMutation({
     mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
       updateCartItem(id, quantity),
