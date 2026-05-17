@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import React, { useCallback, useState, useMemo } from "react";
 import {
   Alert,
@@ -71,10 +71,19 @@ export default function AdminDashboard() {
   const [deliveryPrice, setDeliveryPrice] = useState("");
   const [savingCity, setSavingCity] = useState(false);
 
-  const { data: products = [], isLoading: loadingProducts } = useQuery({ queryKey: ["admin-products"], queryFn: getProducts });
-  const { data: orders = [], isLoading: loadingOrders } = useQuery({ queryKey: ["admin-orders"], queryFn: getOrders });
-  const { data: categories = [], isLoading: loadingCategories } = useQuery({ queryKey: ["admin-categories"], queryFn: getCategories });
-  const { data: cities = [], isLoading: loadingCities } = useQuery({ queryKey: ["cities"], queryFn: getCities });
+  const { data: products = [], isLoading: loadingProducts, refetch: refetchProducts } = useQuery({ queryKey: ["admin-products"], queryFn: getProducts });
+  const { data: orders = [], isLoading: loadingOrders, refetch: refetchOrders } = useQuery({ queryKey: ["admin-orders"], queryFn: getOrders });
+  const { data: categories = [], isLoading: loadingCategories, refetch: refetchCategories } = useQuery({ queryKey: ["admin-categories"], queryFn: getCategories });
+  const { data: cities = [], isLoading: loadingCities, refetch: refetchCities } = useQuery({ queryKey: ["cities"], queryFn: getCities });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchProducts();
+      refetchOrders();
+      refetchCategories();
+      refetchCities();
+    }, [refetchProducts, refetchOrders, refetchCategories, refetchCities])
+  );
 
   const totalRevenue = useMemo(() => orders.reduce((sum: number, order: any) => sum + (order.total || 0), 0), [orders]);
 
@@ -232,8 +241,10 @@ export default function AdminDashboard() {
                 <Text style={styles.productTitle}>{item.title}</Text>
                 <View style={styles.productSubInfo}>
                   <Text style={styles.productPrice}>\u20AA{item.price}</Text>
-                  <View style={[styles.stockBadge, { backgroundColor: (item.stock || 0) < 5 ? "#FFF0F0" : "#F0F9F0" }]}>
-                    <Text style={[styles.stockText, { color: (item.stock || 0) < 5 ? COLORS.danger : COLORS.success }]}>{item.stock || 0} in stock</Text>
+                  <View style={[styles.stockBadge, { backgroundColor: (item.stock || 0) <= 0 ? "#FFF0F0" : (item.stock || 0) < 5 ? "#FFF8E1" : "#F0F9F0" }]}>
+                    <Text style={[styles.stockText, { color: (item.stock || 0) <= 0 ? COLORS.danger : (item.stock || 0) < 5 ? COLORS.warning : COLORS.success }]}>
+                      {(item.stock || 0) <= 0 ? "Out of stock" : `${item.stock || 0} in stock`}
+                    </Text>
                   </View>
                 </View>
               </View>

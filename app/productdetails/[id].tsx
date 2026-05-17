@@ -89,7 +89,7 @@ const ProductDetails = () => {
         product?.quantity ??
         product?.availableQuantity ??
         product?.countInStock ??
-        999
+        0
     );
   };
 

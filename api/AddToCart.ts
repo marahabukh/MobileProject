@@ -53,3 +53,11 @@ export const removeFromCart = async (id: string) => {
 export const updateCartItem = async (id: string, quantity: number) => {
   return await updateDoc(doc(db, "cart", id), { quantity: Number(quantity) });
 };
+
+export const clearCart = async () => {
+  const querySnapshot = await getDocs(collection(db, "cart"));
+  const deletePromises = querySnapshot.docs.map(document => 
+    deleteDoc(doc(db, "cart", document.id))
+  );
+  await Promise.all(deletePromises);
+};

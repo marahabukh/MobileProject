@@ -1,5 +1,5 @@
 import { db } from "./firebase";
-import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, increment } from "firebase/firestore";
 
 
 type OrderItem = {
@@ -42,6 +42,22 @@ export const createOrder = async (payload: CreateOrderPayload) => {
       notes: payload.notes || "",
     };
     const docRef = await addDoc(collection(db, "orders"), orderData);
+    
+    if (payload.items && payload.items.length > 0) {
+      for (const item of payload.items) {
+        if (item.productId) {
+          try {
+            const productRef = doc(db, "products", item.productId);
+            await updateDoc(productRef, {
+              stock: increment(-item.quantity)
+            });
+          } catch (err) {
+            console.error(`Failed to decrease stock for product ${item.productId}:`, err);
+          }
+        }
+      }
+    }
+
     return { id: docRef.id, ...orderData };
   } catch (error) {
     console.error("SDK Create Order Error:", error);

@@ -1,4 +1,4 @@
-import { getCartItems } from "@/api/AddToCart";
+import { getCartItems, clearCart } from "@/api/AddToCart";
 import { getCities, City } from "@/api/City";
 import { createOrder } from "@/api/Order";
 import BackButton from "@/components/BackButton";
@@ -55,7 +55,7 @@ export default function CheckoutPage() {
   const [region, setRegion] = useState("");
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
-  const [agree, setAgree] = useState(false);
+
   const [coupon, setCoupon] = useState("");
 
   const [cardNumber, setCardNumber] = useState("");
@@ -179,28 +179,20 @@ export default function CheckoutPage() {
   createdAt: new Date().toISOString(),
 };
 
-await queryClient.invalidateQueries({ queryKey: ["orders"] });
-await queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-await queryClient.invalidateQueries({ queryKey: ["user-orders"] });
+      console.log("ORDER PAYLOAD:", orderPayload);
 
-router.push({
-  pathname: "/Checkout/orderSucess",
-  params: {
-    orderId: generatedOrderId,
-    total: String(total.toFixed(2)),
-  },
-});
-console.log("ORDER PAYLOAD:", orderPayload);
-
-const createdOrder = await createOrder(orderPayload);
-
-console.log("CREATED ORDER:", createdOrder);
+      const createdOrder = await createOrder(orderPayload);
 
       console.log("CREATED ORDER:", createdOrder);
+
+      await clearCart();
 
       await queryClient.invalidateQueries({ queryKey: ["orders"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       await queryClient.invalidateQueries({ queryKey: ["user-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["cart"] });
+      await queryClient.refetchQueries({ queryKey: ["products"] });
+      await queryClient.refetchQueries({ queryKey: ["admin-products"] });
 
       router.push({
         pathname: "/Checkout/orderSucess",
@@ -503,20 +495,7 @@ console.log("CREATED ORDER:", createdOrder);
                   </Text>
                 </View>
 
-                <TouchableOpacity
-                  style={styles.checkboxRow}
-                  onPress={() => setAgree(!agree)}
-                >
-                  <View
-                    style={[styles.checkbox, agree && styles.checkboxActive]}
-                  >
-                    {agree ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                  </View>
 
-                  <Text style={styles.checkboxText}>
-                    I agree to the terms and conditions and privacy policy *
-                  </Text>
-                </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.confirmButton}
