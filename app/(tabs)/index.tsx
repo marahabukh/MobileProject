@@ -1,20 +1,20 @@
 import React from "react";
 import {
-  FlatList,
-  ImageBackground,
-  ScrollView,
-  StyleSheet,
+  View,
   Text,
+  StyleSheet,
+  ScrollView,
+  FlatList,
   TouchableOpacity,
   useWindowDimensions,
-  View,
+  ImageBackground,
 } from "react-native";
 
 import { useRouter } from "expo-router";
 
-import BottomNavigation from "@/components/Buttomnavigation";
-import CategoryCard from "@/components/CategoryCard";
 import ProductCard from "@/components/ProductCard";
+import CategoryCard from "@/components/CategoryCard";
+import BottomNavigation from "@/components/Buttomnavigation";
 
 import { useOfflineData } from "@/hooks/useOfflineData";
 
@@ -24,7 +24,6 @@ export default function HomeScreen() {
 
   const cardWidth = width * 0.4;
 
-  // SQLite + Firebase Sync
   const {
     hero,
     categories,
@@ -40,7 +39,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
 
-        // Hero Section 
+        {/* Hero Section */}
         {heroLoading ? (
           <View style={[styles.hero, { justifyContent: "center" }]}>
             <Text style={styles.heroTitle}>Loading...</Text>
@@ -61,7 +60,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        // Categories 
+        {/* Categories */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Categories</Text>
 
@@ -95,7 +94,7 @@ export default function HomeScreen() {
           )}
         />
 
-        // Best Sellers 
+        {/* Best Sellers */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Best Sellers</Text>
 
