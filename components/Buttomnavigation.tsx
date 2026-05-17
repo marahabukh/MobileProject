@@ -42,10 +42,10 @@ export default function BottomNavigation() {
 
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => goToProtectedPage("/Cart/AddToCartPage")}
+          onPress={() => router.push("/(tabs)/CategoryPage" as any)}
         >
-          <Ionicons name="cart-outline" size={24} color={textMuted} />
-          <Text style={styles.navText}>Cart</Text>
+          <Ionicons name="grid-outline" size={24} color={textMuted} />
+          <Text style={styles.navText}>Category</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
