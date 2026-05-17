@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
 import {
   ActivityIndicator,
   Alert,
@@ -45,23 +46,43 @@ export default function CheckoutPage() {
     staleTime: 0,
   });
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone1, setPhone1] = useState("");
-  const [phone2, setPhone2] = useState("");
-  const [address, setAddress] = useState("");
+  type CheckoutFormData = {
+    firstName: string;
+    lastName: string;
+    phone1: string;
+    phone2: string;
+    address: string;
+    region: string;
+    notes: string;
+    paymentMethod: string;
+    cardNumber: string;
+    cardHolder: string;
+    expiryDate: string;
+    cvv: string;
+  };
+
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<CheckoutFormData>({
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone1: "",
+      phone2: "",
+      address: "",
+      region: "",
+      notes: "",
+      paymentMethod: "Cash on Delivery",
+      cardNumber: "",
+      cardHolder: "",
+      expiryDate: "",
+      cvv: "",
+    }
+  });
+
+  const paymentMethod = watch("paymentMethod");
+  const [coupon, setCoupon] = useState("");
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [cityModalVisible, setCityModalVisible] = useState(false);
-  const [region, setRegion] = useState("");
-  const [notes, setNotes] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
 
-  const [coupon, setCoupon] = useState("");
-
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardHolder, setCardHolder] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [cvv, setCvv] = useState("");
 
   const subtotal = useMemo(() => {
     if (!Array.isArray(cartItems)) return 0;
@@ -76,8 +97,9 @@ export default function CheckoutPage() {
   const shippingCost = selectedCity ? Number(selectedCity.deliveryPrice) : 0;
   const total = subtotal + shippingCost;
 
-  const handleConfirmOrder = async () => {
+  const handleConfirmOrder = async (data: CheckoutFormData) => {
     try {
+      const { firstName, lastName, phone1, phone2, address, region, notes, paymentMethod, cardNumber, cardHolder, expiryDate, cvv } = data;
       const missingFields: string[] = [];
 
       if (!firstName.trim()) {
@@ -259,49 +281,31 @@ export default function CheckoutPage() {
                 <View style={styles.row}>
                   <View style={styles.halfField}>
                     <Text style={styles.label}>First Name *</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={firstName}
-                      onChangeText={setFirstName}
-                      textAlign="left"
-                    />
+                    <Controller control={control} name="firstName" render={({ field: { onChange, value } }) => (
+                      <TextInput style={styles.input} value={value} onChangeText={onChange} textAlign="left" />
+                    )} />
                   </View>
 
                   <View style={styles.halfField}>
                     <Text style={styles.label}>Last Name *</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={lastName}
-                      onChangeText={setLastName}
-                      textAlign="left"
-                    />
+                    <Controller control={control} name="lastName" render={({ field: { onChange, value } }) => (
+                      <TextInput style={styles.input} value={value} onChangeText={onChange} textAlign="left" />
+                    )} />
                   </View>
                 </View>
 
                 <View style={styles.field}>
                   <Text style={styles.label}>Phone Number (059 / 057) *</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={phone1}
-                    onChangeText={setPhone1}
-                    placeholder="0591234567 / 0571234567"
-                    placeholderTextColor="#aaa"
-                    keyboardType="phone-pad"
-                    textAlign="left"
-                  />
+                  <Controller control={control} name="phone1" render={({ field: { onChange, value } }) => (
+                    <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="0591234567 / 0571234567" placeholderTextColor="#aaa" keyboardType="phone-pad" textAlign="left" />
+                  )} />
                 </View>
 
                 <View style={styles.field}>
                   <Text style={styles.label}>Alternate Phone Number</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={phone2}
-                    onChangeText={setPhone2}
-                    placeholder="0591234567 / 0571234567"
-                    placeholderTextColor="#aaa"
-                    keyboardType="phone-pad"
-                    textAlign="left"
-                  />
+                  <Controller control={control} name="phone2" render={({ field: { onChange, value } }) => (
+                    <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="0591234567 / 0571234567" placeholderTextColor="#aaa" keyboardType="phone-pad" textAlign="left" />
+                  )} />
                 </View>
               </View>
 
@@ -329,38 +333,23 @@ export default function CheckoutPage() {
 
                 <View style={styles.field}>
                   <Text style={styles.label}>Region / Area </Text>
-                  <TextInput
-                    style={styles.input}
-                    value={region}
-                    onChangeText={setRegion}
-                    placeholder="Region name or neighborhood"
-                    placeholderTextColor="#aaa"
-                    textAlign="left"
-                  />
+                  <Controller control={control} name="region" render={({ field: { onChange, value } }) => (
+                    <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="Region name or neighborhood" placeholderTextColor="#aaa" textAlign="left" />
+                  )} />
                 </View>
 
                 <View style={styles.field}>
                   <Text style={styles.label}>Detailed Address </Text>
-                  <TextInput
-                    style={styles.input}
-                    value={address}
-                    onChangeText={setAddress}
-                    placeholder="Street name, building number, floor, etc."
-                    placeholderTextColor="#aaa"
-                    textAlign="left"
-                  />
+                  <Controller control={control} name="address" render={({ field: { onChange, value } }) => (
+                    <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="Street name, building number, floor, etc." placeholderTextColor="#aaa" textAlign="left" />
+                  )} />
                 </View>
 
                 <View style={styles.field}>
                   <Text style={styles.label}>Order Notes</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    value={notes}
-                    onChangeText={setNotes}
-                    multiline
-                    placeholderTextColor="#aaa"
-                    textAlign="left"
-                  />
+                  <Controller control={control} name="notes" render={({ field: { onChange, value } }) => (
+                    <TextInput style={[styles.input, styles.textArea]} value={value} onChangeText={onChange} multiline placeholderTextColor="#aaa" textAlign="left" />
+                  )} />
                 </View>
               </View>
 
@@ -368,29 +357,18 @@ export default function CheckoutPage() {
                 <Text style={styles.sectionTitle}>Payment Method</Text>
 
                 <TouchableOpacity
-                  style={[
-                    styles.paymentOption,
-                    paymentMethod === "Cash on Delivery" &&
-                      styles.paymentOptionSelected,
-                  ]}
-                  onPress={() => setPaymentMethod("Cash on Delivery")}
+                  style={[styles.paymentOption, paymentMethod === "Cash on Delivery" && styles.paymentOptionSelected]}
+                  onPress={() => setValue("paymentMethod", "Cash on Delivery")}
                 >
                   <Text style={styles.paymentText}>Cash on Delivery</Text>
-
                   <View style={styles.radioCircle}>
-                    {paymentMethod === "Cash on Delivery" ? (
-                      <View style={styles.radioInner} />
-                    ) : null}
+                    {paymentMethod === "Cash on Delivery" ? <View style={styles.radioInner} /> : null}
                   </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[
-                    styles.paymentOption,
-                    { marginTop: 12 },
-                    paymentMethod === "Visa" && styles.paymentOptionSelected,
-                  ]}
-                  onPress={() => setPaymentMethod("Visa")}
+                  style={[styles.paymentOption, { marginTop: 12 }, paymentMethod === "Visa" && styles.paymentOptionSelected]}
+                  onPress={() => setValue("paymentMethod", "Visa")}
                 >
                   <View style={styles.paymentTitleRow}>
                     <Ionicons
@@ -413,71 +391,41 @@ export default function CheckoutPage() {
                   <View style={styles.visaForm}>
                     <View style={styles.field}>
                       <Text style={styles.label}>Card Holder Name</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={cardHolder}
-                        onChangeText={setCardHolder}
-                        placeholder="John Doe"
-                        placeholderTextColor="#aaa"
-                        textAlign="left"
-                      />
+                      <Controller control={control} name="cardHolder" render={({ field: { onChange, value } }) => (
+                        <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="John Doe" placeholderTextColor="#aaa" textAlign="left" />
+                      )} />
                     </View>
 
                     <View style={styles.field}>
                       <Text style={styles.label}>Card Number</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={cardNumber}
-                        onChangeText={(text) => {
+                      <Controller control={control} name="cardNumber" render={({ field: { onChange, value } }) => (
+                        <TextInput style={styles.input} value={value} onChangeText={(text) => {
                           const cleaned = text.replace(/\D/g, "");
-                          const formatted = cleaned
-                            .replace(/(.{4})/g, "$1 ")
-                            .trim();
-                          setCardNumber(formatted.substring(0, 19));
-                        }}
-                        placeholder="0000 0000 0000 0000"
-                        placeholderTextColor="#aaa"
-                        keyboardType="numeric"
-                        textAlign="left"
-                      />
+                          const formatted = cleaned.replace(/(.{4})/g, "$1 ").trim();
+                          onChange(formatted.substring(0, 19));
+                        }} placeholder="0000 0000 0000 0000" placeholderTextColor="#aaa" keyboardType="numeric" textAlign="left" />
+                      )} />
                     </View>
 
                     <View style={styles.row}>
                       <View style={styles.halfField}>
                         <Text style={styles.label}>Expiry Date (MM/YY)</Text>
-                        <TextInput
-                          style={styles.input}
-                          value={expiryDate}
-                          onChangeText={(text) => {
+                        <Controller control={control} name="expiryDate" render={({ field: { onChange, value } }) => (
+                          <TextInput style={styles.input} value={value} onChangeText={(text) => {
                             let formatted = text.replace(/\D/g, "");
                             if (formatted.length > 2) {
-                              formatted =
-                                formatted.substring(0, 2) +
-                                "/" +
-                                formatted.substring(2, 4);
+                              formatted = formatted.substring(0, 2) + "/" + formatted.substring(2, 4);
                             }
-                            setExpiryDate(formatted.substring(0, 5));
-                          }}
-                          placeholder="MM/YY"
-                          placeholderTextColor="#aaa"
-                          keyboardType="numeric"
-                          textAlign="left"
-                        />
+                            onChange(formatted.substring(0, 5));
+                          }} placeholder="MM/YY" placeholderTextColor="#aaa" keyboardType="numeric" textAlign="left" />
+                        )} />
                       </View>
 
                       <View style={styles.halfField}>
                         <Text style={styles.label}>CVV</Text>
-                        <TextInput
-                          style={styles.input}
-                          value={cvv}
-                          onChangeText={setCvv}
-                          placeholder="123"
-                          placeholderTextColor="#aaa"
-                          keyboardType="numeric"
-                          maxLength={3}
-                          secureTextEntry
-                          textAlign="left"
-                        />
+                        <Controller control={control} name="cvv" render={({ field: { onChange, value } }) => (
+                          <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="123" placeholderTextColor="#aaa" keyboardType="numeric" maxLength={3} secureTextEntry textAlign="left" />
+                        )} />
                       </View>
                     </View>
                   </View>
@@ -499,7 +447,7 @@ export default function CheckoutPage() {
 
                 <TouchableOpacity
                   style={styles.confirmButton}
-                  onPress={handleConfirmOrder}
+                  onPress={handleSubmit(handleConfirmOrder)}
                   disabled={submittingOrder}
                 >
                   {submittingOrder ? (
